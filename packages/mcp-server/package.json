@@ -1,0 +1,21 @@
+{
+  "name": "@mvb/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "test": "node scripts/test_client.js"
+  },
+  "dependencies": {
+    "@mvb/shared": "0.1.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/ws": "^8.18.0",
+    "typescript": "^5.8.2"
+  }
+}

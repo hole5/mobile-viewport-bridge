@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html class="h-full" lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Mobile Viewport Bridge</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              bg: '#0a1a1f',
+              panel: 'rgba(20, 40, 45, 0.7)',
+              cyan: '#4deeea',
+              cyanGlow: 'rgba(77, 238, 234, 0.4)',
+              border: 'rgba(77, 238, 234, 0.3)',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="__WV_CSS__" />
+</head>
+<body class="h-full flex overflow-hidden js-pre-init">
+<!-- ========== Icon Rail ========== -->
+  <aside class="w-14 flex flex-col items-center py-5 border-r border-cyber-border bg-black/25 z-50 shrink-0" data-purpose="icon-rail">
+    <button type="button" class="mb-8 text-cyber-cyan" title="Mobile Viewport" aria-label="brand">
+      <i class="fa-solid fa-mobile-screen text-lg"></i>
+    </button>
+    <nav id="iconRail" class="flex flex-col gap-6 text-slate-500 text-base">
+      <button type="button" data-mode="preview" class="rail-btn rail-active hover:text-cyber-cyan transition-colors" title="预览"><i class="fa-solid fa-eye"></i></button>
+      <button type="button" data-mode="devices" class="rail-btn hover:text-cyber-cyan transition-colors" title="设备"><i class="fa-solid fa-tablet-screen-button"></i></button>
+      <button type="button" data-mode="inspect" class="rail-btn hover:text-cyber-cyan transition-colors" title="属性检查"><i class="fa-solid fa-crosshairs"></i></button>
+      <button type="button" data-mode="pending" class="rail-btn hover:text-cyber-cyan transition-colors text-slate-500" title="Pending">
+        <i class="fa-solid fa-list-check"></i>
+        <span id="railPendingCount" class="rail-count hidden">0</span>
+      </button>
+      <button type="button" data-mode="settings" class="rail-btn hover:text-cyber-cyan transition-colors" title="设置"><i class="fa-solid fa-gear"></i></button>
+    </nav>
+    <div class="mt-auto text-[9px] text-slate-600 tracking-wide">MVB</div>
+  </aside>
+
+  <main class="flex-1 flex overflow-hidden min-w-0">
+    <!-- ========== Mode Nav ========== -->
+    <section id="modeNav" class="mode-nav glass-panel border-r border-cyber-border py-4 px-3 flex flex-col shrink-0" data-purpose="mode-nav">
+      <div class="mb-4 px-1">
+        <div class="flex items-center justify-between p-2.5 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan text-sm">
+          <div class="flex items-center gap-2 min-w-0">
+            <i class="fa-solid fa-layer-group text-xs shrink-0"></i>
+            <span id="modeTitle" class="font-semibold truncate">预览</span>
+          </div>
+          <span id="mcpPill" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-500/30 shrink-0">MCP …</span>
+        </div>
+      </div>
+      <div id="modeList" class="flex-1 overflow-y-auto space-y-1 text-sm text-slate-300 pr-0.5"></div>
+      <p id="modeHint" class="px-2 pt-3 text-[11px] text-slate-500 leading-relaxed border-t border-cyber-border/40 mt-2">
+        选择模式后，中间画布与右侧属性会联动更新。
+      </p>
+      <p id="modeHintDraft" class="px-2 pt-1 text-[10px] text-slate-600 leading-relaxed" data-draft-only>
+        独立稿 · 对齐扩展能力 · 未写入扩展源码
+      </p>
+    </section>
+
+    <!-- ========== Preview Stage ========== -->
+    <section class="flex-1 relative flex flex-col px-5 py-4 overflow-hidden min-w-0" data-purpose="preview-stage">
+      <header class="flex items-center gap-3 mb-4 flex-wrap">
+        <i class="fa-solid fa-magnifying-glass text-slate-500 text-sm"></i>
+        <input
+          id="urlInput"
+          type="text"
+          value="http://127.0.0.1:5173/"
+          class="flex-1 min-w-[200px] max-w-md bg-black/30 border border-cyber-border rounded-full py-1.5 px-5 text-sm font-mono text-center text-slate-200 outline-none focus:border-cyber-cyan/60"
+        />
+        <button type="button" id="btnReload" class="bg-black/40 border border-cyber-border text-slate-200 px-3 py-1.5 rounded text-sm hover:border-cyber-cyan/50" title="刷新">
+          <span class="material-symbols-outlined text-lg leading-none align-middle">refresh</span>
+        </button>
+      </header>
+
+      <div id="previewToolbar" class="preview-toolbar">
+        <button type="button" id="btnLoad" class="bg-cyber-cyan/85 text-black px-4 py-1.5 rounded text-sm font-bold shadow-[0_0_12px_rgba(77,238,234,0.4)] hover:bg-cyber-cyan">
+          加载
+        </button>
+        <select id="deviceSelect" class="preview-toolbar-device bg-black/40 border border-cyber-border rounded px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-cyber-cyan/50"></select>
+        <span id="sizeLabel" class="text-xs text-slate-500 font-mono">390×844</span>
+        <button type="button" id="btnPip" class="bg-black/40 border border-cyber-border text-slate-200 px-2 py-1.5 rounded text-sm hover:border-cyber-cyan/50" title="打开/关闭悬浮预览">
+          <span class="material-symbols-outlined text-lg leading-none align-middle">picture_in_picture_alt</span>
+        </button>
+        <span class="preview-toolbar-spacer" aria-hidden="true"></span>
+        <span id="pendingBadge" class="text-xs px-2.5 py-1 rounded-full bg-black/40 border border-cyber-border text-slate-400" title="查看 Pending 队列">pending: 0</span>
+        <button type="button" id="btnApply" class="bg-cyber-cyan/85 text-black px-4 py-1.5 rounded text-sm font-bold hover:bg-cyber-cyan disabled:opacity-40 disabled:cursor-not-allowed">
+          应用到代码
+        </button>
+      </div>
+
+      <div id="phoneStage" class="flex-1 flex items-center justify-center relative min-h-0 py-3 overflow-hidden" title="滚轮缩放手机画布">
+        <div class="absolute w-64 h-64 bg-cyber-cyan/10 blur-[70px] rounded-full pointer-events-none"></div>
+        <div id="zoomBar" class="absolute bottom-3 right-3 z-20 flex items-center gap-1 rounded-lg bg-black/50 border border-cyber-border/50 px-1.5 py-1">
+          <button type="button" id="btnZoomOut" class="w-6 h-6 rounded text-slate-300 hover:text-cyber-cyan hover:bg-white/10 text-sm leading-none" title="缩小">−</button>
+          <span id="phoneScaleHint" class="min-w-[2.5rem] text-center text-[10px] text-slate-400 font-mono">100%</span>
+          <button type="button" id="btnZoomIn" class="w-6 h-6 rounded text-slate-300 hover:text-cyber-cyan hover:bg-white/10 text-sm leading-none" title="放大">+</button>
+          <button type="button" id="btnZoomReset" class="ml-0.5 px-1.5 h-6 rounded text-[10px] text-slate-500 hover:text-cyber-cyan hover:bg-white/10" title="重置">重置</button>
+        </div>
+        <!-- 缩放作用在 wrap，避免与 filter 冲突 -->
+        <div id="phoneZoomWrap" class="relative will-change-transform" style="width: 280px; height: 607px;">
+          <div
+            id="phone"
+            class="absolute top-0 left-0"
+            style="width: 405px; height: 871px; transform-origin: top left; filter: drop-shadow(0 18px 40px rgba(0,0,0,.45));"
+          >
+          <img
+            id="phoneFrame"
+            src="__WV_SCREEN__"
+            alt="phone frame"
+            draggable="false"
+            class="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-[1]"
+          />
+          <div id="phoneOffline" class="hidden absolute inset-0 z-[4] flex flex-col items-center justify-center gap-2 bg-[#0a1a1f]/85 text-center px-5 rounded-[2.5rem]">
+            <p class="text-xs text-slate-400">机框图加载失败</p>
+            <button type="button" id="btnRetry3d" class="px-3 py-1.5 rounded bg-cyber-cyan/80 text-black text-xs font-bold">重试</button>
+          </div>
+          <!-- 屏幕开孔：半透明编辑区，贴齐内屏 -->
+          <div
+            id="screen"
+            class="absolute z-[2] overflow-hidden bg-black/12"
+            style="top: 1.05%; left: 1.45%; right: 1.45%; bottom: 1.15%; border-radius: 10% / 5.2%;"
+          >
+            <iframe id="frame" title="viewport-preview" class="absolute inset-0 w-full h-full border-0 bg-transparent pointer-events-none" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+            <div id="emptyHint" class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-100/85 text-xs bg-black/20 backdrop-blur-[1px] pointer-events-none">
+              <div class="w-2 h-2 rounded-full bg-cyber-cyan/80 animate-pulse"></div>
+              点击「加载」在手机内预览
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Inspector ========== -->
+    <aside id="inspectorPanel" class="inspector-panel glass-panel border-l border-cyber-border flex flex-col overflow-hidden shrink-0" data-purpose="inspector">
+      <div id="inspectorResizeHandle" title="拖动调整右栏宽度" aria-label="调整右栏宽度"></div>
+      <div class="p-5 border-b border-cyber-border/50">
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <h3 id="inspectorTitle" class="text-sm font-semibold text-slate-100">属性检查</h3>
+          <span id="inspectModeBadge" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/40">选取中</span>
+          <span id="pendingModeBadge" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-500/30">队列</span>
+          <span id="settingsModeBadge" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-slate-700/80 text-slate-300 border border-slate-500/40">偏好</span>
+        </div>
+        <p id="inspectorDesc" class="text-[11px] text-slate-500 leading-relaxed">进入「检查」后点击手机内元素；改属性后点「写入预览」即时生效并入 pending。</p>
+      </div>
+      <div id="pendingPanel" class="hidden p-5 border-b border-cyber-border/40 space-y-2">
+        <div class="flex justify-between text-xs text-slate-400">
+          <span>待回写</span>
+          <span id="pendingStat" class="font-mono text-cyber-cyan">0</span>
+        </div>
+        <pre id="pendingPromptPreview" class="text-[10px] leading-relaxed text-slate-400 bg-black/35 border border-cyber-border/40 rounded-lg p-3 max-h-44 overflow-auto whitespace-pre-wrap font-mono">队列为空</pre>
+        <button type="button" id="btnCopyPrompt" class="w-full px-3 py-2 rounded-lg text-xs border border-cyber-border text-slate-300 hover:border-cyber-cyan/50 hover:text-cyber-cyan">
+          复制 MCP 提示词
+        </button>
+      </div>
+      <div id="settingsPanel" class="hidden p-5 border-b border-cyber-border/40 space-y-2">
+        <div class="text-[10px] uppercase tracking-wider text-slate-500">当前偏好</div>
+        <pre id="settingsSummary" class="text-[10px] leading-relaxed text-slate-400 bg-black/35 border border-cyber-border/40 rounded-lg p-3 max-h-48 overflow-auto whitespace-pre-wrap font-mono"></pre>
+        <button type="button" id="btnResetSettings" class="w-full px-3 py-2 rounded-lg text-xs border border-cyber-border text-slate-300 hover:border-rose-400/40 hover:text-rose-300">
+          恢复默认设置
+        </button>
+      </div>
+      <div class="p-5 overflow-y-auto flex-1 space-y-4">
+        <div class="field">
+          <label>选中</label>
+          <div class="field-row">
+            <input id="sel" readonly placeholder="未选择" />
+            <button type="button" id="btnClearSel" class="field-row-action" title="清除选中">清除</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>文本</label>
+          <input id="text" placeholder="文案" />
+        </div>
+        <div class="field">
+          <label>颜色</label>
+          <div class="field-row field-row-color">
+            <input id="colorPicker" type="color" value="#4deeea" class="w-9 h-9 rounded border border-cyber-border bg-transparent cursor-pointer p-0.5" />
+            <input id="color" placeholder="#4deeea" />
+          </div>
+        </div>
+        <div class="field">
+          <label>字号</label>
+          <input id="fontSize" placeholder="16px" />
+        </div>
+        <div class="field">
+          <label>字重</label>
+          <select id="fontWeight">
+            <option value="">默认</option>
+            <option value="400">400 普通</option>
+            <option value="500">500 中等</option>
+            <option value="600">600 半粗</option>
+            <option value="700">700 粗体</option>
+            <option value="800">800 特粗</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>宽度</label>
+          <input id="width" placeholder="auto" />
+        </div>
+        <div class="field">
+          <label>高度</label>
+          <input id="height" placeholder="auto" />
+        </div>
+        <div class="field">
+          <label>显示</label>
+          <select id="display">
+            <option value="">默认</option>
+            <option value="block">block</option>
+            <option value="flex">flex</option>
+            <option value="inline-flex">inline-flex</option>
+            <option value="grid">grid</option>
+            <option value="inline-block">inline-block</option>
+            <option value="none">none</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>圆角</label>
+          <input id="borderRadius" placeholder="8px" />
+        </div>
+        <div class="field">
+          <label>外边距</label>
+          <input id="margin" placeholder="8px" />
+        </div>
+        <div class="field">
+          <label>内边距</label>
+          <input id="padding" placeholder="8px" />
+        </div>
+        <div class="field">
+          <label>图片 src</label>
+          <input id="src" placeholder="https://..." />
+        </div>
+        <button type="button" id="btnCommit" class="w-full mt-1 bg-cyber-cyan/85 text-black py-2.5 rounded-lg text-sm font-bold hover:bg-cyber-cyan disabled:opacity-40 disabled:cursor-not-allowed">
+          写入预览
+        </button>
+        <p id="inspectHint" class="text-[11px] text-slate-500 pt-1">等待选择元素…</p>
+
+        <div class="pt-4 border-t border-cyber-border/40">
+          <div class="text-[10px] uppercase tracking-wider text-slate-500 mb-2">会话</div>
+          <div class="text-xs text-slate-400 space-y-2">
+            <div class="flex justify-between gap-3"><span>触控</span><span id="touchLabel" class="text-cyber-cyan">已启用</span></div>
+            <div class="flex justify-between gap-3"><span>DPR</span><span id="dprLabel" class="font-mono text-slate-300">3</span></div>
+            <div class="flex justify-between gap-3"><span>设备</span><span id="deviceLabel" class="text-slate-300 truncate">iPhone 16</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="p-3.5 border-t border-cyber-border/40 text-[10px] text-slate-600 flex justify-between gap-2">
+        <span data-draft-only>独立稿</span>
+        <span id="brandVersion">YRZ · MVB · v__WV_VERSION__</span>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 悬浮预览：可自由拖动的手机窗口 -->
+  <div id="pipModal" class="hidden">
+    <div id="pipWindow" role="dialog" aria-label="悬浮预览">
+      <div id="pipDragHandle" class="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-cyber-border/60 cursor-grab active:cursor-grabbing select-none rounded-t-[16px]">
+        <div class="min-w-0 flex items-center gap-2">
+          <i class="fa-solid fa-grip-vertical text-[10px] text-slate-600"></i>
+          <div class="min-w-0">
+            <div class="text-xs text-cyber-cyan font-medium">悬浮预览 <span id="pipPinBadge" class="hidden text-[9px] ml-1 px-1.5 py-0.5 rounded bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/30">置顶</span></div>
+            <div id="pipDeviceLabel" class="text-[10px] text-slate-500 font-mono truncate">iPhone 16 · 393×852</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button type="button" id="btnPipPin" class="w-7 h-7 rounded-lg text-slate-400 hover:text-cyber-cyan hover:bg-white/5" title="Document PiP 置顶（精简浮窗）">
+            <span class="material-symbols-outlined text-[18px] leading-none">keep</span>
+          </button>
+          <button type="button" id="btnPipTools" class="w-7 h-7 rounded-lg text-slate-400 hover:text-cyber-cyan hover:bg-white/5" title="显示/隐藏功能框">
+            <span class="material-symbols-outlined text-[18px] leading-none">dock_to_left</span>
+          </button>
+          <button type="button" id="btnPipReload" class="w-7 h-7 rounded-lg text-slate-400 hover:text-cyber-cyan hover:bg-white/5" title="刷新内容">
+            <span class="material-symbols-outlined text-[18px] leading-none">refresh</span>
+          </button>
+          <button type="button" id="btnPipClose" class="w-7 h-7 rounded-lg text-slate-400 hover:text-white hover:bg-white/5" title="关闭">
+            <span class="material-symbols-outlined text-[18px] leading-none">close</span>
+          </button>
+        </div>
+      </div>
+      <div id="pipMainRow">
+        <div id="pipBody">
+          <div id="pipPhoneScaleWrap" style="width: 405px; height: 871px; position: relative; overflow: hidden;">
+          <div id="pipPhoneShell" style="width: 405px; height: 871px; position: relative;">
+            <img id="pipPhoneFrame" src="__WV_SCREEN__" alt="phone frame" draggable="false" />
+            <div
+              id="pipScreen"
+              class="absolute overflow-hidden bg-black/12"
+              style="top: 9px; left: 6px; width: 393px; height: 852px; border-radius: 10% / 5.2%;"
+            >
+              <iframe id="pipFrame" title="pip-preview" class="absolute inset-0 w-full h-full border-0 bg-transparent" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+              <div id="pipEmpty" class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-200/80 text-[11px] bg-black/25 pointer-events-none">
+                <div class="w-1.5 h-1.5 rounded-full bg-cyber-cyan/80 animate-pulse"></div>
+                <span id="pipEmptyText">加载预览中…</span>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+        <aside id="pipTools" aria-label="悬浮功能框">
+          <div class="px-1 pb-1 text-[9px] uppercase tracking-wider text-slate-500">快捷</div>
+          <button type="button" class="pip-tool-btn" id="pipToolPin">置顶弹出<span class="sub" id="pipToolPinSub">Document PiP 精简置顶窗</span></button>
+          <button type="button" class="pip-tool-btn" id="pipToolLoad">加载预览<span class="sub">写入演示页</span></button>
+          <button type="button" class="pip-tool-btn" id="pipToolReload">刷新<span class="sub">同步主舞台</span></button>
+          <button type="button" class="pip-tool-btn" id="pipToolInspect">属性检查<span class="sub">进入检查模式</span></button>
+          <button type="button" class="pip-tool-btn" id="pipToolPending">Pending<span class="sub" id="pipToolPendingSub">0 条</span></button>
+          <button type="button" class="pip-tool-btn" id="pipToolFrame">外框开关<span class="sub" id="pipToolFrameSub">显示中</span></button>
+          <button type="button" class="pip-tool-btn" id="pipToolApply">应用到代码<span class="sub">演示入队应用</span></button>
+          <div class="mt-auto pt-2 border-t border-white/5 space-y-1">
+            <div class="px-1 text-[9px] text-slate-600 font-mono" id="pipToolSize">393×852</div>
+            <button type="button" class="pip-tool-btn" id="pipToolHide">隐藏功能框<span class="sub">再展开：点标题栏按钮</span></button>
+          </div>
+        </aside>
+      </div>
+      <button type="button" id="pipToolsToggle" title="展开功能框" aria-label="展开功能框">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <div id="pipResizeHandle" title="拖动调整窗口大小（手机自动缩放）" aria-label="调整窗口大小"></div>
+    </div>
+  </div>
+
+  <script src="__WV_APP__"></script>
+</body>
+</html>

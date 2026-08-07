@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "mobile-viewport-bridge": {
+      "command": "node",
+      "args": [
+        "D:/stitch_parent_child_design_system/mobile-viewport-bridge/packages/mcp-server/dist/server.js"
+      ],
+      "env": {
+        "MVB_WS_PORT": "3847",
+        "START_MCP_TIMEOUT_MS": "30000",
+        "RUN_MCP_TIMEOUT_MS": "60000"
+      }
+    }
+  }
+}

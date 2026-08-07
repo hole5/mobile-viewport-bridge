@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-extension",
+      "type": "shell",
+      "command": "npm run build -w @mvb/shared && npm run build -w mobile-viewport-bridge",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$tsc",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "watch-extension",
+      "type": "shell",
+      "command": "npm run watch -w mobile-viewport-bridge",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "All watchers active",
+          "endsPattern": "All watchers active"
+        }
+      }
+    }
+  ]
+}

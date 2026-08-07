@@ -1,0 +1,21 @@
+{
+  "name": "mvb-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cursor mobile viewport preview + MCP bidirectional bridge",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @mvb/shared && npm run build -w @mvb/mcp-server && npm run build -w mobile-viewport-bridge",
+    "build:mcp": "npm run build -w @mvb/mcp-server",
+    "build:ext": "npm run build -w mobile-viewport-bridge",
+    "test:mcp": "node packages/mcp-server/scripts/test_client.js",
+    "demo": "npm run dev -w demo-web",
+    "start:mcp": "node packages/mcp-server/dist/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

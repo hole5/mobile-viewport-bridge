@@ -1,0 +1,82 @@
+{
+  "name": "mobile-viewport-bridge",
+  "displayName": "Mobile Viewport Bridge",
+  "description": "Phone viewport preview with MCP bidirectional edits for Cursor/VS Code",
+  "version": "0.1.8",
+  "publisher": "mvb",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onCommand:mobileViewport.open",
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mobileViewport.open",
+        "title": "Mobile Viewport: Open",
+        "category": "Mobile Viewport"
+      },
+      {
+        "command": "mobileViewport.reload",
+        "title": "Mobile Viewport: Reload",
+        "category": "Mobile Viewport"
+      },
+      {
+        "command": "mobileViewport.applyToCode",
+        "title": "Mobile Viewport: Apply Edits To Code (text local + Agent)",
+        "category": "Mobile Viewport"
+      }
+    ],
+    "configuration": {
+      "title": "Mobile Viewport Bridge",
+      "properties": {
+        "mobileViewport.url": {
+          "type": "string",
+          "default": "http://127.0.0.1:5173",
+          "description": "Default preview URL"
+        },
+        "mobileViewport.deviceId": {
+          "type": "string",
+          "default": "iphone-16",
+          "description": "Default device preset id"
+        },
+        "mobileViewport.wsPort": {
+          "type": "number",
+          "default": 3847,
+          "description": "Local WebSocket port for MCP bridge"
+        },
+        "mobileViewport.promptPreviewOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "打开扩展时提示加载/启动当前工作区中的 Web 预览"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/bundle.js",
+    "build:tsc": "tsc -p tsconfig.json && node scripts/copy-media.js",
+    "watch": "node scripts/watch.js",
+    "watch:shared": "tsc -p ../shared/tsconfig.json -w",
+    "package": "npm run build && npx @vscode/vsce package --no-dependencies --allow-missing-repository"
+  },
+  "dependencies": {
+    "@mvb/shared": "0.1.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.18.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.25.12",
+    "typescript": "^5.8.2"
+  }
+}

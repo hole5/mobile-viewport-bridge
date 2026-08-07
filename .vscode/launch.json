@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "F5 开发调试（先构建再启动）",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/packages/extension/dist/**/*.js"
+      ],
+      "preLaunchTask": "build-extension"
+    },
+    {
+      "name": "F5 快速启动（终端先跑 npm run watch）",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/packages/extension/dist/**/*.js"
+      ]
+    }
+  ]
+}
