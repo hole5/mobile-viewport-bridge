@@ -26,6 +26,12 @@ import {
   applyFullPageScale as applyFullPageScaleImpl,
   setUserPhoneZoom,
   setLastFitScale,
+  toggleLandscape,
+  isLandscape,
+  setLandscape,
+  setDprSimulation,
+  setInteractiveMode,
+  setShowNotch,
 } from './layout';
 
 /** Typed getElementById helper to avoid verbose casts at every call site. */
@@ -103,6 +109,11 @@ function settingsSummaryText() {
     'showMcpPill: ' + settings.showMcpPill,
     'toastMs: ' + settings.toastMs,
     'defaultUrl: ' + settings.defaultUrl,
+    'interactiveMode: ' + settings.interactiveMode,
+    'fullPageScale: ' + settings.fullPageScale,
+    'dprSimulation: ' + settings.dprSimulation,
+    'touchSimulation: ' + settings.touchSimulation,
+    'showNotch: ' + settings.showNotch,
   ].join('\n');
 }
 
@@ -118,6 +129,12 @@ function applySettings() {
   if (frameImg) {
     frameImg.classList.toggle('opacity-0', !settings.showFrame);
     frameImg.style.visibility = settings.showFrame ? 'visible' : 'hidden';
+    // 切换手机框样式
+    const styleKey = settings.frameStyle === 'style1' ? 'data-screen-style1' : 'data-screen-default';
+    const newSrc = frameImg.getAttribute(styleKey);
+    if (newSrc && frameImg.getAttribute('src') !== newSrc) {
+      frameImg.setAttribute('src', newSrc);
+    }
   }
   if (phoneEl) {
     phoneEl.classList.toggle('phone-frame-glow', !!settings.frameGlow);
@@ -136,6 +153,36 @@ function applySettings() {
   document.getElementById('btnApply').title = settings.copyOnApply
     ? '应用到代码并复制 MCP 提示（演示）'
     : '应用到代码（演示，不自动复制）';
+
+  // 同步预览体验设置
+  setInteractiveMode(settings.interactiveMode);
+  setDprSimulation(settings.dprSimulation);
+  setShowNotch(settings.showNotch);
+  applyPhoneCanvasSize(device());
+  syncTouchSimulationToFrame();
+
+  // 同步工具栏按钮状态
+  const btnInteractive = document.getElementById('btnInteractive');
+  if (btnInteractive) {
+    btnInteractive.classList.toggle('text-cyber-cyan', settings.interactiveMode);
+    btnInteractive.classList.toggle('border-cyber-cyan/50', settings.interactiveMode);
+  }
+  const btnDprEl = document.getElementById('btnDpr');
+  if (btnDprEl) {
+    btnDprEl.classList.toggle('text-cyber-cyan', settings.dprSimulation);
+    btnDprEl.classList.toggle('border-cyber-cyan/50', settings.dprSimulation);
+  }
+  const btnTouchEl = document.getElementById('btnTouch');
+  if (btnTouchEl) {
+    btnTouchEl.classList.toggle('text-cyber-cyan', settings.touchSimulation);
+    btnTouchEl.classList.toggle('border-cyber-cyan/50', settings.touchSimulation);
+  }
+  const btnNotchEl = document.getElementById('btnNotch');
+  if (btnNotchEl) {
+    btnNotchEl.classList.toggle('text-cyber-cyan', settings.showNotch);
+    btnNotchEl.classList.toggle('border-cyber-cyan/50', settings.showNotch);
+  }
+
   if (pipOpen) layoutPipPhone();
 }
 
@@ -213,13 +260,31 @@ const pipMgr = createPipManager({
   getFrame: () => frame,
 });
 
+function updateTouchLabel() {
+  const label = document.getElementById('touchLabel');
+  if (!label) return;
+  if (settings.touchSimulation) {
+    label.textContent = '模拟中';
+    label.className = 'text-cyber-cyan';
+    return;
+  }
+  const d = device();
+  label.textContent = d.hasTouch ? '机型支持' : '未启用';
+  label.className = d.hasTouch ? 'text-slate-300' : 'text-slate-500';
+}
+
+/** 把触控模拟开关同步进 iframe（代理页 picker / 演示 srcdoc 均监听 mvb-host） */
+function syncTouchSimulationToFrame() {
+  updateTouchLabel();
+  sendHostToFrame('touchSimulation', { enabled: !!settings.touchSimulation });
+}
+
 function syncDeviceChrome() {
   const d = device();
   sizeLabel.textContent = d.width + '×' + d.height;
   document.getElementById('deviceLabel').textContent = d.name;
   document.getElementById('dprLabel').textContent = String(d.deviceScaleFactor);
-  document.getElementById('touchLabel').textContent = d.hasTouch ? '已启用' : '未启用';
-  document.getElementById('touchLabel').className = d.hasTouch ? 'text-cyber-cyan' : 'text-slate-500';
+  updateTouchLabel();
   deviceSelect.value = d.id;
   applyPhoneCanvasSize(d);
   if (pipOpen) layoutPipPhone();
@@ -232,19 +297,35 @@ function syncDeviceChrome() {
   }
 }
 
+function framePointerEvents(): string {
+  return settings.interactiveMode || mode === 'inspect' ? 'auto' : 'none';
+}
+
 function applyConfigure(msg) {
   if (!msg) return;
   if (msg.deviceId) deviceId = String(msg.deviceId);
   if (msg.url) urlInput.value = String(msg.url);
+  if (typeof msg.landscape === 'boolean' && msg.landscape !== isLandscape) {
+    setLandscape(msg.landscape);
+    const btnRotateEl = document.getElementById('btnRotate');
+    if (btnRotateEl) {
+      btnRotateEl.classList.toggle('text-cyber-cyan', msg.landscape);
+      btnRotateEl.classList.toggle('border-cyber-cyan/50', msg.landscape);
+    }
+  }
   currentProxyUrl = String(msg.proxyUrl || msg.url || '');
   syncDeviceChrome();
   if (!currentProxyUrl) return;
   loaded = true;
   emptyHint.classList.add('hidden');
   frame.classList.remove('pointer-events-none');
-  frame.style.pointerEvents = 'auto';
+  frame.style.pointerEvents = framePointerEvents();
   frame.removeAttribute('srcdoc');
   frame.src = withCacheBust(currentProxyUrl);
+  applyPhoneCanvasSize(device());
+  // 重载后 picker_ready 会再同步；此处作备份（延迟等待 iframe 就绪）
+  setTimeout(() => syncTouchSimulationToFrame(), 300);
+  setTimeout(() => syncTouchSimulationToFrame(), 1000);
   if (pipOpen) {
     layoutPipPhone();
     syncPipContent();
@@ -259,22 +340,73 @@ function sendHostToFrame(type: string, payload: unknown) {
   sendHostToFrameImpl(frame, type, payload);
 }
 
+/** 最近一次上报的页面高度（整页缩放开关打开时使用） */
+let lastPageHeight = 0;
+let pageHeightTimer: ReturnType<typeof setTimeout> | null = null;
+
 function applyPhoneCanvasSize(d: Parameters<typeof applyPhoneCanvasSizeImpl>[0]) {
   applyPhoneCanvasSizeImpl(d);
+  // layout 只看 interactiveMode；检查模式也需要可点选
+  if (frame) frame.style.pointerEvents = framePointerEvents();
+  // 画布重算后，若开启整页缩放则重新压入视口（避免被 DPR transform 盖掉）
+  if (settings.fullPageScale && lastPageHeight > d.height) {
+    applyFullPageScaleTransform(lastPageHeight);
+  }
 }
 
+/** 默认真机滚动；仅 settings.fullPageScale=true 时做等比缩略 */
 function applyFullPageScale(pageHeight?: number) {
-  applyFullPageScaleImpl(pageHeight);
+  if (typeof pageHeight === 'number' && pageHeight > 0) {
+    lastPageHeight = pageHeight;
+  }
+  const d = device();
+  if (!settings.fullPageScale) {
+    // 真机滚动：恢复设备视口（含 DPR / 横屏）
+    applyFullPageScaleImpl();
+    applyPhoneCanvasSizeImpl(d);
+    return;
+  }
+  applyFullPageScaleTransform(lastPageHeight || pageHeight || 0);
+}
+
+function applyFullPageScaleTransform(pageHeight: number) {
+  const d = device();
+  const frameEl = document.getElementById('frame');
+  const pipFrameEl = document.getElementById('pipFrame');
+  const actualHeight = Math.max(0, pageHeight || 0);
+  if (!frameEl) return;
+
+  if (actualHeight <= d.height || actualHeight === 0) {
+    applyFullPageScaleImpl();
+    applyPhoneCanvasSizeImpl(d);
+    return;
+  }
+
+  const scale = d.height / actualHeight;
+  frameEl.style.width = d.width + 'px';
+  frameEl.style.height = actualHeight + 'px';
+  frameEl.style.transformOrigin = 'top left';
+  frameEl.style.transform = 'scale(' + scale + ')';
+
+  if (pipFrameEl) {
+    pipFrameEl.style.width = d.width + 'px';
+    pipFrameEl.style.height = actualHeight + 'px';
+    pipFrameEl.style.transformOrigin = 'top left';
+    pipFrameEl.style.transform = 'scale(' + scale + ')';
+  }
 }
 
 function buildDemoSrc() {
   const d = device();
   const url = urlInput.value;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${d.width},initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  // 横屏时 viewport 宽 = 竖屏高，页面才能延展铺满长边
+  const vw = isLandscape ? d.height : d.width;
+  const vh = isLandscape ? d.width : d.height;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${vw},initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{overflow:hidden!important;overscroll-behavior:none!important}
-  body{font-family:system-ui,sans-serif;background:#0b1220;color:#e2e8f0;padding:20px 16px}
+  html,body{width:100%;min-width:100%;min-height:100%;height:auto;overflow:auto;overscroll-behavior:contain}
+  body{font-family:system-ui,sans-serif;background:#0b1220;color:#e2e8f0;padding:20px 16px;-webkit-overflow-scrolling:touch}
   .hero{font-size:20px;font-weight:700;margin-bottom:6px;cursor:crosshair;border-radius:6px;outline-offset:3px}
   .sub{font-size:11px;opacity:.6;margin-bottom:16px;word-break:break-all}
   .card{background:#13222a;border:1px solid rgba(77,238,234,.3);border-radius:14px;padding:14px;margin-bottom:12px;cursor:crosshair;outline-offset:3px;transition:outline .12s,box-shadow .12s}
@@ -288,12 +420,14 @@ function buildDemoSrc() {
   <div class="sub">${url}</div>
   <div class="card" id="c1" data-sel="div.card#overview" data-text="今日概览 — 点我选中" data-color="#4deeea" data-fs="14px" data-fw="500" data-w="auto" data-h="auto" data-dis="block" data-br="14px" data-margin="0 0 12px" data-padding="14px">
 <span class="chip">${d.name}</span>
-<span class="chip">${d.width}×${d.height}</span>
+<span class="chip">${vw}×${vh}${isLandscape ? ' · 横屏' : ''}</span>
 <div style="margin-top:10px;font-size:14px;color:#4deeea" id="c1text" data-edit-text>今日概览 — 点我选中</div>
   </div>
-  <div class="card" id="c2" data-sel="div.card#cta" data-text="开始体验" data-color="#0a1a1f" data-fs="15px" data-fw="700" data-w="auto" data-h="auto" data-dis="block" data-br="10px" data-margin="0" data-padding="0">
+  <div class="card" id="c2" data-sel="div.card#cta" data-text="开始体验" data-color="#0a1a1f" data-fs="15px" data-fw="700" data-w="auto" data-h="auto" data-dis="block" data-br="10px" data-margin="0 0 12px" data-padding="0">
 <div id="c2text" data-edit-text style="background:#4deeea;color:#0a1a1f;text-align:center;padding:10px;border-radius:10px;font-weight:700;font-size:15px">开始体验</div>
   </div>
+  <div class="card"><div style="font-size:13px;line-height:1.6">📱 滚动测试区 — 鼠标滚轮 / 触控板上下滚动即可在手机内浏览长页面，与真实手机浏览器一致。</div></div>
+  ${Array.from({length: 6}, (_, i) => `<div class="card"><span class="chip">卡片 ${i+1}</span><div style="margin-top:8px;font-size:13px;line-height:1.5">这是第 ${i+1} 段示例内容，用来演示页面在手机屏幕内的自然滚动行为。实际使用时，把预览 URL 替换成你自己的页面即可。</div></div>`).join('')}
 <script>
   let current = null;
   function mark(sel){
@@ -331,9 +465,37 @@ el.addEventListener('click',e=>{
   emit(el);
 });
   });
+  let touchSimStyle = null;
+  let touchNavPatched = false;
+  function setTouchSimulation(enabled){
+    var root = document.documentElement;
+    try {
+      if (enabled && !touchNavPatched) {
+        Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, get: function(){ return 5; } });
+        if (!('ontouchstart' in window)) { try { window.ontouchstart = null; } catch(_){} }
+        touchNavPatched = true;
+      }
+    } catch(_){}
+    if (enabled) {
+      if (root) root.classList.add('mvb-touch-sim');
+      if (touchSimStyle) return;
+      touchSimStyle = document.createElement('style');
+      touchSimStyle.setAttribute('data-mvb','touch-simulation');
+      touchSimStyle.textContent = 'html.mvb-touch-sim,html.mvb-touch-sim *{-webkit-tap-highlight-color:transparent!important;touch-action:manipulation!important}html.mvb-touch-sim *:hover{cursor:pointer!important;transition:none!important;transform:none!important;filter:none!important;box-shadow:none!important;outline:none!important;text-decoration:inherit!important}';
+      if (root) root.appendChild(touchSimStyle);
+    } else {
+      if (root) root.classList.remove('mvb-touch-sim');
+      if (touchSimStyle && touchSimStyle.parentNode) touchSimStyle.parentNode.removeChild(touchSimStyle);
+      touchSimStyle = null;
+    }
+  }
   window.addEventListener('message',e=>{
 const m = e.data;
 if(!m) return;
+if(m.source==='mvb-host' && m.type==='touchSimulation'){
+  setTouchSimulation(!!(m.payload && m.payload.enabled));
+  return;
+}
 if(m.type==='inspect-highlight' && m.sel){ mark(m.sel); return; }
 if(m.type==='inspect-clear'){
   document.querySelectorAll('[data-sel]').forEach(n=>n.classList.remove('on','hov'));
@@ -366,10 +528,8 @@ if(m.type==='inspect-apply' && m.sel){
   parent.postMessage({ type:'inspect-applied', sel: m.sel }, '*');
 }
   });
-  window.addEventListener('wheel', (e) => {
-e.preventDefault();
-parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
-  }, { passive: false });
+  // wheel inside the demo iframe now scrolls natively (like a real phone browser).
+  // Zoom control is handled at the host level (outside the phone screen).
 <\/script>
 </body></html>`;
 }
@@ -629,8 +789,25 @@ function renderModeList() {
     }
 
     addSection('画布');
-    addToggle('showFrame', '手机外框', '显示 ui-screen.png 机框');
+    addToggle('showFrame', '手机外框', '显示机框图');
     addToggle('frameGlow', '机框高亮描边', 'phone-frame-glow');
+
+    // 手机框样式切换
+    const frameStyleBtn = document.createElement('button');
+    frameStyleBtn.type = 'button';
+    frameStyleBtn.className = 'setting-row mx-2';
+    frameStyleBtn.style.width = 'calc(100% - 1rem)';
+    const frameStyleLabel = settings.frameStyle === 'style1' ? '新框 (ui-screen1)' : '默认框 (ui-screen)';
+    frameStyleBtn.innerHTML =
+      '<div class="min-w-0"><div class="text-xs text-slate-200">手机框样式</div>' +
+      '<div class="meta">点击切换机框图</div></div>' +
+      '<span class="text-[11px] font-mono text-cyber-cyan shrink-0">' + frameStyleLabel + '</span>';
+    frameStyleBtn.addEventListener('click', () => {
+      const next = settings.frameStyle === 'style1' ? 'default' : 'style1';
+      setSetting('frameStyle', next, '手机框 · ' + (next === 'style1' ? '新框' : '默认框'));
+    });
+    modeList.appendChild(frameStyleBtn);
+
     addToggle('showZoomBar', '缩放控件', '右下角 + / − / 重置');
     addToggle('wheelZoom', '滚轮缩放', '指针在画布上时滚轮缩放');
     addToggle('dblclickReset', '双击重置缩放', '双击画布回到 100%');
@@ -656,6 +833,13 @@ function renderModeList() {
     addToggle('autoLoadInspect', '检查时自动加载', '进入检查模式自动加载演示页');
     addToggle('mergePending', '合并同选择器', '写入 pending 时合并 ops');
     addToggle('copyOnApply', '应用时复制 MCP', '「应用到代码」自动复制提示词');
+
+    addSection('预览体验');
+    addToggle('interactiveMode', '可交互模式', '允许 iframe 滚动和点击');
+    addToggle('fullPageScale', '整页缩放', '把长页等比压进一屏（默认关·真机滚动）');
+    addToggle('dprSimulation', 'DPR 高分辨率', '按设备像素比渲染，更接近真机');
+    addToggle('touchSimulation', '触控模拟', '禁用 hover 效果，模拟移动端');
+    addToggle('showNotch', '灵动岛/刘海', '显示屏幕顶部的刘海或灵动岛');
 
     addSection('界面');
     addToggle('showMcpPill', 'MCP 标签', '左侧标题旁 MCP demo');
@@ -905,9 +1089,12 @@ function loadPreview(announce) {
   loaded = true;
   emptyHint.classList.add('hidden');
   frame.classList.remove('pointer-events-none');
-  frame.style.pointerEvents = 'auto';
+  frame.style.pointerEvents = framePointerEvents();
   frame.removeAttribute('src');
   frame.srcdoc = buildDemoSrc();
+  applyPhoneCanvasSize(device());
+  // srcdoc 就绪后补发触控状态（脚本已监听 mvb-host）
+  setTimeout(() => syncTouchSimulationToFrame(), 50);
   if (pipOpen) {
     layoutPipPhone();
     syncPipContent();
@@ -1120,10 +1307,125 @@ document.getElementById('btnResetSettings').addEventListener('click', () => {
   notify('已恢复默认设置');
 });
 
+// 横竖屏切换按钮
+const btnRotate = document.getElementById('btnRotate');
+if (btnRotate) {
+  btnRotate.addEventListener('click', () => {
+    const newLandscape = toggleLandscape();
+    // 重新应用机框/iframe 几何
+    applyPhoneCanvasSize(device());
+    // 更新按钮状态
+    btnRotate.classList.toggle('text-cyber-cyan', newLandscape);
+    btnRotate.classList.toggle('border-cyber-cyan/50', newLandscape);
+    // 同步到 PiP
+    if (pipOpen) pipMgr.handleDeviceChange();
+    // 重载预览：更新 viewport meta（横屏 width=竖屏高），否则页面仍按竖屏宽排版、右侧留白
+    if (IS_EXTENSION && loaded) {
+      VSCODE_API.postMessage({ type: 'orientation_change', landscape: newLandscape });
+    } else if (loaded) {
+      loadPreview(false);
+    }
+    notify(newLandscape ? '已切换为横屏 · 视口已按长边重载' : '已切换为竖屏 · 视口已重载');
+  });
+}
+
 document.getElementById('btnPip').addEventListener('click', () => {
   if (pipOpen && !pipDetachMode) closePip();
   else openPip();
 });
+
+// 可交互模式按钮
+const btnInteractive = document.getElementById('btnInteractive');
+if (btnInteractive) {
+  // 初始化按钮状态
+  btnInteractive.classList.toggle('text-cyber-cyan', settings.interactiveMode);
+  btnInteractive.classList.toggle('border-cyber-cyan/50', settings.interactiveMode);
+  setInteractiveMode(settings.interactiveMode);
+
+  btnInteractive.addEventListener('click', () => {
+    const next = !settings.interactiveMode;
+    settings.interactiveMode = next;
+    persistSettings(settings);
+    setInteractiveMode(next);
+    applyPhoneCanvasSize(device());
+    // 立刻打开 iframe 命中，避免等下一帧 layout
+    if (frame) {
+      frame.style.pointerEvents = next || mode === 'inspect' ? 'auto' : 'none';
+      frame.classList.toggle('pointer-events-none', !(next || mode === 'inspect'));
+    }
+    btnInteractive.classList.toggle('text-cyber-cyan', next);
+    btnInteractive.classList.toggle('border-cyber-cyan/50', next);
+    notify(next ? '可交互模式 · 开（滚轮滚动页面，边缘可缩放画布）' : '可交互模式 · 关');
+  });
+}
+
+// DPR 模拟按钮
+const btnDpr = document.getElementById('btnDpr');
+if (btnDpr) {
+  // 初始化按钮状态
+  btnDpr.classList.toggle('text-cyber-cyan', settings.dprSimulation);
+  btnDpr.classList.toggle('border-cyber-cyan/50', settings.dprSimulation);
+  setDprSimulation(settings.dprSimulation);
+
+  btnDpr.addEventListener('click', () => {
+    const next = !settings.dprSimulation;
+    settings.dprSimulation = next;
+    persistSettings(settings);
+    setDprSimulation(next);
+    applyPhoneCanvasSize(device());
+    btnDpr.classList.toggle('text-cyber-cyan', next);
+    btnDpr.classList.toggle('border-cyber-cyan/50', next);
+    notify(next ? 'DPR 高分辨率 · 开' : 'DPR 高分辨率 · 关');
+  });
+}
+
+// 触控模拟按钮
+const btnTouch = document.getElementById('btnTouch');
+if (btnTouch) {
+  // 初始化按钮状态
+  btnTouch.classList.toggle('text-cyber-cyan', settings.touchSimulation);
+  btnTouch.classList.toggle('border-cyber-cyan/50', settings.touchSimulation);
+
+  btnTouch.addEventListener('click', () => {
+    const next = !settings.touchSimulation;
+    settings.touchSimulation = next;
+    // 开触控时自动进入可交互，否则 iframe 指针事件被关掉，模拟无意义
+    if (next && !settings.interactiveMode) {
+      settings.interactiveMode = true;
+      setInteractiveMode(true);
+      const btnInteractive = document.getElementById('btnInteractive');
+      if (btnInteractive) {
+        btnInteractive.classList.toggle('text-cyber-cyan', true);
+        btnInteractive.classList.toggle('border-cyber-cyan/50', true);
+      }
+    }
+    persistSettings(settings);
+    btnTouch.classList.toggle('text-cyber-cyan', next);
+    btnTouch.classList.toggle('border-cyber-cyan/50', next);
+    syncTouchSimulationToFrame();
+    notify(next ? '触控模拟 · 开（已联动可交互）' : '触控模拟 · 关');
+  });
+}
+
+// 显示/隐藏灵动岛和刘海按钮
+const btnNotch = document.getElementById('btnNotch');
+if (btnNotch) {
+  // 初始化按钮状态
+  btnNotch.classList.toggle('text-cyber-cyan', settings.showNotch);
+  btnNotch.classList.toggle('border-cyber-cyan/50', settings.showNotch);
+  setShowNotch(settings.showNotch);
+
+  btnNotch.addEventListener('click', () => {
+    const next = !settings.showNotch;
+    settings.showNotch = next;
+    persistSettings(settings);
+    setShowNotch(next);
+    applyPhoneCanvasSize(device());
+    btnNotch.classList.toggle('text-cyber-cyan', next);
+    btnNotch.classList.toggle('border-cyber-cyan/50', next);
+    notify(next ? '灵动岛 · 显示' : '灵动岛 · 隐藏');
+  });
+}
 
 function supportsDocPip() { return pipMgr.supportsDocPip(); }
 
@@ -1217,10 +1519,14 @@ window.addEventListener('message', (e) => {
         mcp.textContent = 'Picker ON';
         mcp.classList.add('border-emerald-400/50');
       }
+      // 代理重载后重放触控模拟状态（避免仅靠延时备份）
+      syncTouchSimulationToFrame();
     }
-    // === 整页预览：收到页面高度后等比缩放 iframe ===
+    // === 页面高度：默认真机滚动忽略缩放；开启 fullPageScale 时防抖缩放 ===
     if (msg.type === 'page_height' && msg.payload) {
-      applyFullPageScale(msg.payload.height);
+      const h = Number(msg.payload.height) || 0;
+      if (pageHeightTimer) clearTimeout(pageHeightTimer);
+      pageHeightTimer = setTimeout(() => applyFullPageScale(h), 100);
     }
     return;
   }
@@ -1327,6 +1633,10 @@ requestAnimationFrame(() => {
   applyPhoneCanvasSize(device());
   document.body.classList.remove('js-pre-init');
 });
+// 二次兜底：等主机 webview 注入 configure、首屏 layout 真正稳定之后，
+// 再按当前设备强制重算一次屏幕开孔和缩放，确保预览完全贴合手机内屏。
+setTimeout(() => applyPhoneCanvasSize(device()), 80);
+setTimeout(() => applyPhoneCanvasSize(device()), 400);
 
 if (IS_EXTENSION) {
   const mcp = document.getElementById('mcpPill');
@@ -1358,8 +1668,49 @@ if (IS_EXTENSION) {
   }
 
   document.addEventListener('wheel', (e) => {
+    const screenEl = document.getElementById('screen');
+    let overScreen = false;
+    if (screenEl) {
+      const sr = screenEl.getBoundingClientRect();
+      overScreen = e.clientX >= sr.left && e.clientX <= sr.right
+        && e.clientY >= sr.top && e.clientY <= sr.bottom;
+    }
+
+    // 可交互 / 检查模式：指针在屏幕开孔上时，把滚轮交给 iframe 内页面滚动。
+    // VS Code webview 里仅靠不 preventDefault 往往无法让嵌套 iframe 原生滚动。
+    if (overScreen && (settings.interactiveMode || mode === 'inspect')) {
+      try {
+        const win = frame && frame.contentWindow;
+        if (win) {
+          const doc = win.document;
+          const se = doc.scrollingElement || doc.documentElement || doc.body;
+          if (se) {
+            const beforeTop = se.scrollTop;
+            const beforeLeft = se.scrollLeft;
+            se.scrollTop += e.deltaY;
+            se.scrollLeft += e.deltaX;
+            // 若文档本身不可滚，再试 window.scrollBy
+            if (se.scrollTop === beforeTop && se.scrollLeft === beforeLeft) {
+              win.scrollBy(e.deltaX, e.deltaY);
+            }
+          } else {
+            win.scrollBy(e.deltaX, e.deltaY);
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+      } catch (_) {
+        /* cross-origin：无法注入滚动，交给浏览器默认行为 */
+      }
+      return;
+    }
+
     if (!settings.wheelZoom) return;
     if (!isOverStage(e.clientX, e.clientY)) return;
+    // 非交互时屏幕区域不吞滚轮做缩放，避免误触
+    if (overScreen) return;
+
     e.preventDefault();
     e.stopPropagation();
     zoomByDelta(e.deltaY || e.deltaX);
@@ -1382,7 +1733,8 @@ if (IS_EXTENSION) {
   window.addEventListener('message', (e) => {
     const msg = e.data;
     if (msg && msg.type === 'phone-zoom') {
-      if (!settings.wheelZoom) return;
+      // 可交互时 iframe 内滚轮应滚动页面，不再转成画布缩放
+      if (!settings.wheelZoom || settings.interactiveMode || mode === 'inspect') return;
       zoomByDelta(msg.deltaY || 0);
     }
   });

@@ -15,14 +15,23 @@
     /* 手机预览链路上的所有容器强制无滚动条 */
     #phoneStage,
     #phoneZoomWrap,
-    #phone,
-    #screen {
+    #phone {
       overflow: hidden !important;
       overscroll-behavior: none !important;
     }
     #phoneStage::-webkit-scrollbar,
     #phoneZoomWrap::-webkit-scrollbar,
-    #phone::-webkit-scrollbar,
+    #phone::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    /* #screen 自身作为手机屏幕容器，使用 overflow: clip 裁切圆角，
+       iframe 内的文档滚动由浏览器原生处理，与真实手机浏览器一致。 */
+    #screen {
+      overflow: hidden !important;
+      overscroll-behavior: contain !important;
+    }
     #screen::-webkit-scrollbar {
       display: none !important;
       width: 0 !important;
@@ -42,10 +51,11 @@
       width: 0 !important;
       height: 0 !important;
     }
-    /* iframe 自身禁止滚动条 */
+    /* iframe 自身允许内容自然滚动，隐藏滚动条以模拟真实手机浏览器 */
     iframe#frame, iframe#pipFrame {
-      overflow: hidden !important;
+      overflow: auto !important;
       scrollbar-width: none !important;
+      -webkit-overflow-scrolling: touch;
     }
     iframe#frame::-webkit-scrollbar,
     iframe#pipFrame::-webkit-scrollbar {
@@ -522,4 +532,72 @@
       object-fit: fill;
       pointer-events: none;
       user-select: none;
+    }
+
+    /* ========== 设备刘海/打孔样式 ========== */
+
+    .device-notch {
+      background: #000;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* iPhone 灵动岛 */
+    .notch-dynamic-island {
+      background: #000;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    /* iPhone 刘海 */
+    .notch-notch {
+      background: #000;
+      border-radius: 0 0 50% 50% / 0 0 100% 100% !important;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    /* Pixel 药丸打孔 */
+    .notch-pill {
+      background: #000;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    /* Galaxy 居中打孔 */
+    .notch-hole-punch {
+      background: #000;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+    }
+
+    /* ========== 底部导航条样式 ========== */
+
+    .device-home-indicator {
+      background: rgba(255,255,255,0.85);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* iOS Home Indicator */
+    .indicator-home-indicator {
+      background: rgba(255,255,255,0.9);
+      opacity: 0.9;
+    }
+
+    /* Android 手势条 */
+    .indicator-gesture-bar {
+      background: rgba(255,255,255,0.6);
+      opacity: 0.7;
+    }
+
+    /* ========== 横屏模式 ========== */
+
+    /* 横屏时手机旋转 90 度 */
+    #phone.landscape {
+      transform: rotate(90deg);
+      transform-origin: center center;
+    }
+
+    /* 横屏时刘海和底部导航条也需要相应调整位置（由 JS 控制） */
+
+    /* 横屏模式下的缩放容器调整 */
+    #phoneZoomWrap.landscape {
+      /* 横屏时宽高互换，由 JS 动态计算 */
     }

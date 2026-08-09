@@ -1,7 +1,7 @@
 /** Picture-in-Picture management — extracted from runtime.ts. */
 
 import { devicePhoneGeometry, type DeviceLike } from './geometry';
-import { layoutPhoneShell } from './utils';
+import { layoutPhoneShell, layoutNotch, layoutHomeIndicator } from './utils';
 import {
   userPhoneZoom,
   lastFitScale,
@@ -296,7 +296,7 @@ export function createPipManager(ctx: PipManagerCtx): PipManager {
     targetDoc.documentElement.className = 'h-full';
     targetDoc.documentElement.style.cssText = 'height:100%;width:100%;background:#0a1a1f;';
     targetDoc.body.className = 'h-full';
-    targetDoc.body.style.cssText = 'margin:0;background:#0a1a1f;overflow:hidden;height:100%;width:100%;';
+    targetDoc.body.style.cssText = 'margin:0;background:#0a1a1f;overflow:auto;height:100%;width:100%;-webkit-overflow-scrolling:touch;';
     try { targetDoc.title = '悬浮预览'; } catch (_) {}
     document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
       targetDoc.head.appendChild(node.cloneNode(true));
@@ -306,7 +306,7 @@ export function createPipManager(ctx: PipManagerCtx): PipManager {
     targetDoc.head.prepend(base);
     const boot = targetDoc.createElement('style');
     boot.textContent = [
-      'html,body{background:#0a1a1f!important;color:#e2e8f0;height:100%;width:100%;margin:0;overflow:hidden}',
+      'html,body{background:#0a1a1f!important;color:#e2e8f0;height:100%;width:100%;margin:0;overflow:auto;-webkit-overflow-scrolling:touch}',
       '#pipToolsToggle{display:none!important}',
       '#pipPinBadge{display:none!important}',
     ].join('');
@@ -353,6 +353,12 @@ export function createPipManager(ctx: PipManagerCtx): PipManager {
     shell.style.left = 'auto';
     shell.style.transform = 'none';
 
+    // 应用刘海和底部导航条布局
+    const notchEl = win.querySelector<HTMLElement>('#pipNotch');
+    const homeIndicatorEl = win.querySelector<HTMLElement>('#pipHomeIndicator');
+    layoutNotch(notchEl, screenEl, g);
+    layoutHomeIndicator(homeIndicatorEl, screenEl, g);
+
     if (scaleWrap) {
       const useZoom = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('zoom', '1');
       scaleWrap.style.position = 'relative';
@@ -382,6 +388,12 @@ export function createPipManager(ctx: PipManagerCtx): PipManager {
     if (frameImg) {
       frameImg.style.visibility = settings.showFrame ? 'visible' : 'hidden';
       frameImg.classList.toggle('opacity-0', !settings.showFrame);
+      // 同步手机框样式切换
+      const styleKey = settings.frameStyle === 'style1' ? 'data-screen-style1' : 'data-screen-default';
+      const newSrc = frameImg.getAttribute(styleKey);
+      if (newSrc && frameImg.getAttribute('src') !== newSrc) {
+        frameImg.setAttribute('src', newSrc);
+      }
     }
   };
 

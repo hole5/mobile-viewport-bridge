@@ -2,7 +2,7 @@
   "name": "mobile-viewport-bridge",
   "displayName": "Mobile Viewport Bridge",
   "description": "Phone viewport preview with MCP bidirectional edits for Cursor/VS Code",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "publisher": "mvb",
   "engines": {
     "vscode": "^1.85.0"

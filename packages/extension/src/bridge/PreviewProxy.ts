@@ -6,6 +6,49 @@ const PICKER_SCRIPT = `
 (() => {
   if (window.__mvbPicker) return;
   window.__mvbPicker = true;
+  // MVB 预览兜底：强制 html/body 铺满整个设备视口宽度，
+  // 避免页面缺少 width:100% 时 body 只占内容宽度，造成屏幕右侧大片空白。
+  (function () {
+    var s = document.createElement('style');
+    s.setAttribute('data-mvb', 'viewport-reset');
+    s.textContent = 'html,body{width:100%!important;min-width:100%!important;max-width:none!important;margin:0!important;padding:0!important;box-sizing:border-box!important;}*,*::before,*::after{box-sizing:inherit;}';
+    if (document.documentElement) document.documentElement.appendChild(s);
+    else document.addEventListener('DOMContentLoaded', function () { document.documentElement.appendChild(s); }, { once: true });
+  })();
+  // MVB 滚动修复：仅当 html/body 被锁死滚动时放宽 overflow-y，
+  // 不强制 height:auto，避免破坏 height:100% + 内部滚动容器的 SPA。
+  (function () {
+    function needsUnlock(el) {
+      if (!el) return false;
+      var cs = getComputedStyle(el);
+      return cs.overflow === 'hidden' || cs.overflowY === 'hidden';
+    }
+    function applyOverflowFix() {
+      var de = document.documentElement;
+      var b = document.body;
+      if (!de) return;
+      de.style.setProperty('overscroll-behavior', 'contain', 'important');
+      if (needsUnlock(de)) {
+        de.style.setProperty('overflow-y', 'auto', 'important');
+        de.style.setProperty('overflow-x', 'hidden', 'important');
+      }
+      if (b) {
+        b.style.setProperty('overscroll-behavior', 'contain', 'important');
+        b.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
+        if (needsUnlock(b)) {
+          b.style.setProperty('overflow-y', 'auto', 'important');
+          b.style.setProperty('overflow-x', 'hidden', 'important');
+        }
+      }
+    }
+    if (document.documentElement) applyOverflowFix();
+    else document.addEventListener('DOMContentLoaded', applyOverflowFix, { once: true });
+    window.addEventListener('load', function () {
+      setTimeout(applyOverflowFix, 100);
+      setTimeout(applyOverflowFix, 500);
+      setTimeout(applyOverflowFix, 1500);
+    }, { once: true });
+  })();
   let selected = null;
   let hover = null;
   let nodeSeq = 0;
@@ -98,6 +141,82 @@ const PICKER_SCRIPT = `
     overlay.style.borderColor = '#22c55e';
   }, true);
 
+  // 触控模拟：伪装触控能力 + 抑制桌面 hover 样式
+  let touchSimStyle = null;
+  let touchNavPatched = false;
+  let touchNavBackup = null;
+  function patchTouchNavigator(enabled) {
+    try {
+      if (enabled) {
+        if (touchNavPatched) return;
+        touchNavBackup = {
+          maxTouchPoints: navigator.maxTouchPoints,
+          ontouchstart: 'ontouchstart' in window,
+        };
+        try {
+          Object.defineProperty(navigator, 'maxTouchPoints', {
+            configurable: true,
+            get: function () { return 5; },
+          });
+        } catch (_) {}
+        if (!('ontouchstart' in window)) {
+          try { window.ontouchstart = null; } catch (_) {}
+        }
+        touchNavPatched = true;
+      } else if (touchNavPatched) {
+        try {
+          if (touchNavBackup) {
+            Object.defineProperty(navigator, 'maxTouchPoints', {
+              configurable: true,
+              get: function () { return touchNavBackup.maxTouchPoints; },
+            });
+          }
+        } catch (_) {}
+        touchNavPatched = false;
+        touchNavBackup = null;
+      }
+    } catch (_) {}
+  }
+  function setTouchSimulation(enabled) {
+    var root = document.documentElement;
+    patchTouchNavigator(!!enabled);
+    if (enabled) {
+      if (root) root.classList.add('mvb-touch-sim');
+      if (touchSimStyle) return;
+      touchSimStyle = document.createElement('style');
+      touchSimStyle.setAttribute('data-mvb', 'touch-simulation');
+      // 1) tap 高亮 / 双击缩放  2) 抑制常见 hover 视觉（不强制 color:initial，避免闪错色）
+      touchSimStyle.textContent = [
+        'html.mvb-touch-sim, html.mvb-touch-sim * {',
+        '  -webkit-tap-highlight-color: transparent !important;',
+        '  touch-action: manipulation !important;',
+        '}',
+        'html.mvb-touch-sim *:hover {',
+        '  cursor: pointer !important;',
+        '  transition: none !important;',
+        '  transform: none !important;',
+        '  filter: none !important;',
+        '  box-shadow: none !important;',
+        '  outline: none !important;',
+        '  text-decoration: inherit !important;',
+        '}',
+      ].join('');
+      if (root) root.appendChild(touchSimStyle);
+      else document.addEventListener('DOMContentLoaded', function () {
+        if (touchSimStyle && document.documentElement) {
+          document.documentElement.classList.add('mvb-touch-sim');
+          document.documentElement.appendChild(touchSimStyle);
+        }
+      }, { once: true });
+    } else {
+      if (root) root.classList.remove('mvb-touch-sim');
+      if (touchSimStyle && touchSimStyle.parentNode) {
+        touchSimStyle.parentNode.removeChild(touchSimStyle);
+      }
+      touchSimStyle = null;
+    }
+  }
+
   window.addEventListener('message', (ev) => {
     const data = ev.data;
     if (!data || data.source !== 'mvb-host') return;
@@ -132,11 +251,16 @@ const PICKER_SCRIPT = `
         text: el ? (el.innerText || '').slice(0, 500) : '',
       });
     }
+    if (data.type === 'touchSimulation') {
+      const { enabled } = data.payload || {};
+      setTouchSimulation(!!enabled);
+    }
   });
 
   post('picker_ready', { href: location.href });
 
-  // === 整页高度上报：用于父窗口等比缩放整页预览 ===
+  // === 整页高度上报：供父窗口「整页缩放」模式使用（默认关闭时父页会忽略缩放） ===
+  let heightTimer = 0;
   function reportPageHeight() {
     const body = document.body;
     const docEl = document.documentElement;
@@ -151,15 +275,17 @@ const PICKER_SCRIPT = `
       viewportWidth: docEl ? docEl.clientWidth : (body ? body.clientWidth : 0),
     });
   }
-  if (document.readyState === 'complete') reportPageHeight();
-  else window.addEventListener('load', reportPageHeight);
-  // 动态内容延迟上报
-  setTimeout(reportPageHeight, 300);
-  setTimeout(reportPageHeight, 1000);
-  setTimeout(reportPageHeight, 2500);
-  // 监听 DOM 变化重新上报
+  function scheduleReport() {
+    if (heightTimer) clearTimeout(heightTimer);
+    heightTimer = setTimeout(reportPageHeight, 120);
+  }
+  if (document.readyState === 'complete') scheduleReport();
+  else window.addEventListener('load', scheduleReport);
+  setTimeout(scheduleReport, 300);
+  setTimeout(scheduleReport, 1000);
+  setTimeout(scheduleReport, 2500);
   if (typeof MutationObserver !== 'undefined') {
-    const mo = new MutationObserver(() => reportPageHeight());
+    const mo = new MutationObserver(() => scheduleReport());
     mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
   }
 })();
@@ -237,10 +363,11 @@ export class PreviewProxy {
     }
   }
 
-  proxyUrl(target: string, userAgent?: string): string {
-    const base = `http://127.0.0.1:${this._port}/proxy?url=${encodeURIComponent(target)}`;
-    if (userAgent) return base + '&ua=' + encodeURIComponent(userAgent);
-    return base;
+  proxyUrl(target: string, userAgent?: string, viewportWidth?: number): string {
+    let url = `http://127.0.0.1:${this._port}/proxy?url=${encodeURIComponent(target)}`;
+    if (userAgent) url += '&ua=' + encodeURIComponent(userAgent);
+    if (viewportWidth && viewportWidth > 0) url += '&vw=' + encodeURIComponent(String(Math.round(viewportWidth)));
+    return url;
   }
 
   dispose(): void {
@@ -294,33 +421,32 @@ export class PreviewProxy {
           const notice = `<!-- MVB proxy: target is HTTPS → picker script inlined to avoid mixed-content blocking -->`;
           html = notice + html;
         }
-        if (html.includes('</body>')) html = html.replace('</body>', `${inject}</body>`);
-        else html += inject;
         if (!/<base\s/i.test(html)) {
           const base = target.endsWith('/') ? target : target.replace(/\/[^/]*$/, '/');
           html = html.replace(/<head([^>]*)>/i, `<head$1><base href="${base}">`);
         }
-        // 注入 viewport meta（页面缺失时）+ 整页预览 CSS（禁止滚动，交由外层等比缩放展示）
-        const scrollbarCSS = `<style>
-html::-webkit-scrollbar,body::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;-webkit-appearance:none!important}
-html{scrollbar-width:none!important;-ms-overflow-style:none!important;overflow:hidden!important;overscroll-behavior:none!important}
-body{overflow:hidden!important;scrollbar-width:none!important;-ms-overflow-style:none!important;overscroll-behavior:none!important}
-body::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;-webkit-appearance:none!important}
+        // 隐藏滚动条轨道；不强制 height/overflow，由 picker 按需解锁
+        const scrollbarCSS = `<style data-mvb="scrollbar">
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none;-webkit-appearance:none}
+html,body{scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain}
 </style>`;
-        const viewportMeta = `<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">`;
-        if (!/name=["']viewport["']/i.test(html)) {
-          html = html.replace(/<head([^>]*)>/i, `<head$1>${viewportMeta}${scrollbarCSS}`);
-        } else {
-          if (html.includes('</head>')) html = html.replace('</head>', `${scrollbarCSS}</head>`);
-          else html = scrollbarCSS + html;
-        }
+        // 锁定为设备 CSS 宽（来自 ?vw=），避免 device-width 跟随错误 iframe 尺寸
+        const vwRaw = u.searchParams.get('vw');
+        const viewportWidth =
+          vwRaw && /^\d+$/.test(vwRaw) ? vwRaw : 'device-width';
+        const viewportMeta = `<meta name="viewport" content="width=${viewportWidth}, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">`;
+        html = html.replace(/<meta\s+name=["']viewport["'][^>]*>/gi, '');
+        if (html.includes('</head>')) html = html.replace('</head>', `${viewportMeta}</head>`);
+        else html += viewportMeta;
+        if (html.includes('</body>')) html = html.replace('</body>', `${scrollbarCSS}${inject}</body>`);
+        else { html += scrollbarCSS + inject; }
         body = Buffer.from(html, 'utf8');
       }
+      // HTTPS 目标：picker 已内联，不再注入收紧的 CSP，以免阻断页面自身 CDN 脚本
       res.writeHead(200, {
         'Content-Type': contentType,
         'Cache-Control': 'no-store',
         'Access-Control-Allow-Origin': '*',
-        ...(isHttpsTarget ? { 'Content-Security-Policy': "script-src 'unsafe-inline' 'self'" } : {}),
       });
       res.end(body);
     } catch (e) {

@@ -5,6 +5,20 @@ export const DEFAULT_PROXY_PORT = 3848;
 export const VIEWPORT_EVENT_CHANNEL = 'viewportEventChannel';
 export const RESOURCE_OVERVIEW_URI = 'viewport://session/overview';
 
+/** 顶部刘海/打孔类型 */
+export type NotchType =
+  | 'dynamic-island'
+  | 'notch'
+  | 'pill'
+  | 'hole-punch'
+  | 'none';
+
+/** 底部导航条类型 */
+export type HomeIndicatorType =
+  | 'home-indicator'
+  | 'gesture-bar'
+  | 'none';
+
 export type DevicePreset = {
   id: string;
   name: string;
@@ -14,6 +28,8 @@ export type DevicePreset = {
   userAgent: string;
   hasTouch: boolean;
   isMobile: boolean;
+  notchType: NotchType;
+  homeIndicatorType: HomeIndicatorType;
 };
 
 export type EditOp =
@@ -92,6 +108,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
     hasTouch: true,
     isMobile: true,
+    notchType: 'dynamic-island',
+    homeIndicatorType: 'home-indicator',
   },
   {
     id: 'iphone-16',
@@ -103,6 +121,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
     hasTouch: true,
     isMobile: true,
+    notchType: 'dynamic-island',
+    homeIndicatorType: 'home-indicator',
   },
   {
     id: 'iphone-15',
@@ -114,6 +134,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     hasTouch: true,
     isMobile: true,
+    notchType: 'dynamic-island',
+    homeIndicatorType: 'home-indicator',
   },
   {
     id: 'iphone-14',
@@ -125,6 +147,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
     hasTouch: true,
     isMobile: true,
+    notchType: 'notch',
+    homeIndicatorType: 'home-indicator',
   },
   {
     id: 'iphone-se',
@@ -136,6 +160,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1',
     hasTouch: true,
     isMobile: true,
+    notchType: 'none',
+    homeIndicatorType: 'none',
   },
   {
     id: 'pixel-9',
@@ -147,6 +173,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36',
     hasTouch: true,
     isMobile: true,
+    notchType: 'pill',
+    homeIndicatorType: 'gesture-bar',
   },
   {
     id: 'galaxy-s25',
@@ -158,6 +186,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (Linux; Android 15; SM-S931B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36',
     hasTouch: true,
     isMobile: true,
+    notchType: 'hole-punch',
+    homeIndicatorType: 'gesture-bar',
   },
   {
     id: 'galaxy-s24',
@@ -169,6 +199,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
     hasTouch: true,
     isMobile: true,
+    notchType: 'hole-punch',
+    homeIndicatorType: 'gesture-bar',
   },
   {
     id: 'ipad-mini',
@@ -180,6 +212,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     hasTouch: true,
     isMobile: true,
+    notchType: 'none',
+    homeIndicatorType: 'none',
   },
   {
     id: 'ipad-air',
@@ -191,6 +225,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
       'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     hasTouch: true,
     isMobile: true,
+    notchType: 'none',
+    homeIndicatorType: 'none',
   },
 ];
 

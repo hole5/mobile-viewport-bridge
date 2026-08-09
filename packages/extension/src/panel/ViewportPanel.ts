@@ -18,6 +18,8 @@ export class ViewportPanel {
   private disposed = false;
   private proxyReady = false;
   private webviewReady = false;
+  /** 与 webview 横屏开关同步：决定 proxy viewport CSS 宽 */
+  private landscape = false;
 
   static show(context: vscode.ExtensionContext, bridge: McpBridgeClient): void {
     if (ViewportPanel.current) {
@@ -115,6 +117,7 @@ export class ViewportPanel {
       url: this.url,
       proxyUrl: this.proxySrc(),
       deviceId: this.deviceId,
+      landscape: this.landscape,
       devices: DEVICE_PRESETS,
     });
   }
@@ -346,7 +349,9 @@ export class ViewportPanel {
   private proxySrc(): string {
     try {
       const device = DEVICE_PRESETS.find((d) => d.id === this.deviceId) || DEVICE_PRESETS[0];
-      return this.proxy.proxyUrl(this.url, device.userAgent);
+      // 横屏：CSS 视口宽 = 竖屏高；竖屏：CSS 视口宽 = 竖屏宽
+      const viewportWidth = this.landscape ? device.height : device.width;
+      return this.proxy.proxyUrl(this.url, device.userAgent, viewportWidth);
     } catch {
       return this.url;
     }
@@ -363,11 +368,8 @@ export class ViewportPanel {
 
       case 'set_device':
         this.deviceId = String(args.deviceId);
-        this.panel.webview.postMessage({ type: 'set_device', deviceId: this.deviceId });
-        // 设备切换后重新加载预览，使 viewport meta 生效于新尺寸
-        if (args.reload !== false) {
-          this.panel.webview.postMessage({ type: 'reload' });
-        }
+        // 重建 proxyUrl（UA + 设备 CSS 宽），使上游与 viewport meta 跟随机型
+        this.sendConfigureToWebview();
         this.syncState();
         return { deviceId: this.deviceId };
 
@@ -423,8 +425,15 @@ export class ViewportPanel {
     }
     if (type === 'device_change') {
       this.deviceId = String(msg.deviceId || this.deviceId);
-      // 设备切换后重新加载预览
-      this.panel.webview.postMessage({ type: 'reload' });
+      // 重建 proxyUrl（UA + vw）并重新加载，保证机型一致
+      this.sendConfigureToWebview();
+      this.syncState();
+      return;
+    }
+    if (type === 'orientation_change') {
+      this.landscape = !!msg.landscape;
+      // 横竖屏切换必须重载：viewport meta 的 width 需要变成长边/短边
+      this.sendConfigureToWebview();
       this.syncState();
       return;
     }
@@ -613,12 +622,13 @@ export class ViewportPanel {
     .wrap { height:100%; display:flex; flex-direction:column; }
     .bar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid rgba(77,238,234,.28); background:rgba(0,0,0,.35); }
     .bar button { background:rgba(77,238,234,.15); color:#4deeea; border:1px solid rgba(77,238,234,.35); border-radius:8px; padding:4px 10px; cursor:pointer; }
-    .stage { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:16px; background:radial-gradient(circle at 50% 30%, rgba(77,238,234,.08), transparent 55%); }
-    .phone { position:relative; width:${opts.shellW}px; height:${opts.shellH}px; max-width:100%; max-height:100%; }
+    .stage { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:16px; overflow:hidden; background:radial-gradient(circle at 50% 30%, rgba(77,238,234,.08), transparent 55%); }
+    #scaleWrap { position:relative; flex-shrink:0; transform-origin:center center; overflow:hidden; }
+    .phone { position:relative; width:${opts.shellW}px; height:${opts.shellH}px; }
     .phone img { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; pointer-events:none; }
     .screen { position:absolute; overflow:hidden; background:#000; border-radius:${opts.radius};
       top:${insetTopPct}%; left:${insetSidePct}%; right:${insetSidePct}%; bottom:${insetBottomPct}%; }
-    iframe { border:0; width:100%; height:100%; display:block; background:#111; }
+    iframe { border:0; width:100%; height:100%; display:block; background:#111; overflow:auto; -webkit-overflow-scrolling:touch; }
   </style>
 </head>
 <body>
@@ -628,10 +638,12 @@ export class ViewportPanel {
       <button type="button" id="btnBack">收回主面板</button>
     </div>
     <div class="stage">
-      <div class="phone">
-        <img src="${screenUri}" alt="frame" />
-        <div class="screen">
-          <iframe id="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" src="${frameSrc}"></iframe>
+      <div id="scaleWrap">
+        <div class="phone">
+          <img src="${screenUri}" alt="frame" />
+          <div class="screen">
+            <iframe id="frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" src="${frameSrc}"></iframe>
+          </div>
         </div>
       </div>
     </div>
@@ -639,45 +651,26 @@ export class ViewportPanel {
   <script>
     const vscode = acquireVsCodeApi();
     document.getElementById('btnBack').onclick = () => vscode.postMessage({ type: 'pip_attach' });
-    // 自适应缩放：让手机外壳完整显示在窗口内
+    // 自适应缩放：让手机外壳完整显示在窗口内（等比，不破宽高比）
     function fitScale() {
       var sw = document.getElementById('scaleWrap');
+      var phone = document.querySelector('.phone');
       var stage = document.querySelector('.stage');
-      if (!sw || !stage) return;
+      if (!sw || !phone || !stage) return;
       var margin = 32;
-      var availW = stage.clientWidth - margin;
-      var availH = stage.clientHeight - margin;
+      var availW = Math.max(60, stage.clientWidth - margin);
+      var availH = Math.max(80, stage.clientHeight - margin);
       var shellW = ${opts.shellW};
       var shellH = ${opts.shellH};
-      var scale = Math.min(1, availW / shellW, availH / shellH);
-      sw.style.transform = 'scale(' + scale + ')';
+      var scale = Math.max(0.15, Math.min(1, availW / shellW, availH / shellH));
+      sw.style.width = Math.round(shellW * scale) + 'px';
+      sw.style.height = Math.round(shellH * scale) + 'px';
+      phone.style.transformOrigin = 'top left';
+      phone.style.transform = 'scale(' + scale + ')';
     }
     window.addEventListener('resize', fitScale);
     window.addEventListener('load', fitScale);
     setTimeout(fitScale, 100);
-
-    // === 整页预览：监听 iframe 内 picker 上报的页面高度，等比缩放 ===
-    var SCREEN_W = ${opts.screenW};
-    var SCREEN_H = ${opts.screenH};
-    window.addEventListener('message', function(e) {
-      var msg = e.data;
-      if (!msg || msg.source !== 'mvb-picker' || msg.type !== 'page_height') return;
-      var pageHeight = (msg.payload && msg.payload.height) || 0;
-      var frame = document.getElementById('frame');
-      if (!frame) return;
-      if (pageHeight <= SCREEN_H || pageHeight === 0) {
-        frame.style.transform = '';
-        frame.style.width = '100%';
-        frame.style.height = '100%';
-        frame.style.transformOrigin = '';
-        return;
-      }
-      var scale = SCREEN_H / pageHeight;
-      frame.style.width = SCREEN_W + 'px';
-      frame.style.height = pageHeight + 'px';
-      frame.style.transformOrigin = 'top left';
-      frame.style.transform = 'scale(' + scale + ')';
-    });
   </script>
 </body>
 </html>`;
@@ -707,6 +700,7 @@ export class ViewportPanel {
     const cssUri = this.webviewAssetUri(mediaDir, 'styles/main.css');
     const appUri = this.webviewAssetUri(mediaDir, 'app.js');
     const screenUri = this.webviewAssetUri(mediaDir, 'ui-screen.png');
+    const screen1Uri = this.webviewAssetUri(mediaDir, 'ui-screen1.png');
     const version = String(this.context.extension.packageJSON?.version || '0.0.0');
 
     html = html
@@ -716,6 +710,8 @@ export class ViewportPanel {
       .join(appUri)
       .split('__WV_SCREEN__')
       .join(screenUri)
+      .split('__WV_SCREEN1__')
+      .join(screen1Uri)
       .split('__WV_VERSION__')
       .join(version)
       .split('./ui-screen.png')

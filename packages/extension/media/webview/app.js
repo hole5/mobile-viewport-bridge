@@ -1,28 +1,345 @@
 "use strict";
 (() => {
+  var __create = Object.create;
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __getProtoOf = Object.getPrototypeOf;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __commonJS = (cb, mod) => function __require() {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
+
+  // ../shared/dist/layoutAlign.js
+  var require_layoutAlign = __commonJS({
+    "../shared/dist/layoutAlign.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.POSITIONISH_STYLE_PROPS = exports.LAYOUT_SNAP_COARSE_PX = exports.LAYOUT_SNAP_STEP_PX = void 0;
+      exports.snapLayoutPx = snapLayoutPx;
+      exports.parseCssPx = parseCssPx;
+      exports.snapCssPxValue = snapCssPxValue;
+      exports.snapCssBoxShorthand = snapCssBoxShorthand;
+      exports.alignMoveOp = alignMoveOp;
+      exports.alignStyleOpValue = alignStyleOpValue;
+      exports.LAYOUT_SNAP_STEP_PX = 4;
+      exports.LAYOUT_SNAP_COARSE_PX = 8;
+      function snapLayoutPx(value, step = exports.LAYOUT_SNAP_STEP_PX) {
+        if (!Number.isFinite(value))
+          return 0;
+        if (step <= 0)
+          return value;
+        return Math.round(value / step) * step;
+      }
+      function parseCssPx(raw) {
+        const m = String(raw || "").trim().match(/^(-?\d+(?:\.\d+)?)\s*px$/i);
+        return m ? Number(m[1]) : null;
+      }
+      function snapCssPxValue(raw, step = exports.LAYOUT_SNAP_STEP_PX) {
+        const n = parseCssPx(raw);
+        if (n === null)
+          return raw;
+        return `${snapLayoutPx(n, step)}px`;
+      }
+      function snapCssBoxShorthand(raw, step = exports.LAYOUT_SNAP_STEP_PX) {
+        const parts = String(raw || "").trim().split(/\s+/);
+        if (!parts.length)
+          return raw;
+        const snapped = [];
+        for (const p of parts) {
+          const n = parseCssPx(p);
+          if (n === null)
+            return raw;
+          snapped.push(`${snapLayoutPx(n, step)}px`);
+        }
+        return snapped.join(" ");
+      }
+      function alignMoveOp(op, step = exports.LAYOUT_SNAP_STEP_PX) {
+        return {
+          ...op,
+          x: snapLayoutPx(op.x, step),
+          y: snapLayoutPx(op.y, step)
+        };
+      }
+      exports.POSITIONISH_STYLE_PROPS = /* @__PURE__ */ new Set([
+        "left",
+        "top",
+        "right",
+        "bottom",
+        "width",
+        "height",
+        "margin",
+        "margin-top",
+        "margin-right",
+        "margin-bottom",
+        "margin-left",
+        "padding",
+        "padding-top",
+        "padding-right",
+        "padding-bottom",
+        "padding-left",
+        "gap",
+        "row-gap",
+        "column-gap",
+        "translate",
+        "inset"
+      ]);
+      function alignStyleOpValue(prop, value, step = exports.LAYOUT_SNAP_STEP_PX) {
+        const key = prop.trim().toLowerCase();
+        if (!exports.POSITIONISH_STYLE_PROPS.has(key) && key !== "transform")
+          return value;
+        if (key === "transform") {
+          return value.replace(/(-?\d+(?:\.\d+)?)px/g, (m) => snapCssPxValue(m, step));
+        }
+        if (key.includes("margin") || key.includes("padding") || key === "inset" || key === "gap" || key.endsWith("-gap")) {
+          return snapCssBoxShorthand(value, step);
+        }
+        return snapCssPxValue(value, step);
+      }
+    }
+  });
+
+  // ../shared/dist/geometry.js
+  var require_geometry = __commonJS({
+    "../shared/dist/geometry.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.screenInsetsFor = screenInsetsFor2;
+      exports.devicePhoneGeometry = devicePhoneGeometry2;
+      exports.insetPercentages = insetPercentages;
+      function screenInsetsFor2(device) {
+        const isTablet = device.width / device.height > 0.65;
+        return isTablet ? { top: 0.022, bottom: 0.02, left: 0.018, right: 0.018, radius: "4% / 3%" } : { top: 0.0105, bottom: 0.0115, left: 0.0145, right: 0.0145, radius: "10% / 5.2%" };
+      }
+      function devicePhoneGeometry2(device) {
+        const inset = screenInsetsFor2(device);
+        const screenW = device.width;
+        const screenH = device.height;
+        const shellW = Math.round(screenW / (1 - inset.left - inset.right));
+        const shellH = Math.round(screenH / (1 - inset.top - inset.bottom));
+        return { device, inset, screenW, screenH, shellW, shellH };
+      }
+      function insetPercentages(inset) {
+        return {
+          topPct: (inset.top * 100).toFixed(4) + "%",
+          bottomPct: (inset.bottom * 100).toFixed(4) + "%",
+          leftPct: (inset.left * 100).toFixed(4) + "%",
+          rightPct: (inset.right * 100).toFixed(4) + "%"
+        };
+      }
+    }
+  });
+
+  // ../shared/dist/protocol.js
+  var require_protocol = __commonJS({
+    "../shared/dist/protocol.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.insetPercentages = exports.devicePhoneGeometry = exports.screenInsetsFor = exports.alignStyleOpValue = exports.alignMoveOp = exports.snapCssBoxShorthand = exports.snapCssPxValue = exports.parseCssPx = exports.snapLayoutPx = exports.POSITIONISH_STYLE_PROPS = exports.LAYOUT_SNAP_COARSE_PX = exports.LAYOUT_SNAP_STEP_PX = exports.DEVICE_PRESETS = exports.RESOURCE_OVERVIEW_URI = exports.VIEWPORT_EVENT_CHANNEL = exports.DEFAULT_PROXY_PORT = exports.DEFAULT_WS_PORT = void 0;
+      exports.createSessionId = createSessionId;
+      exports.createEditId = createEditId;
+      exports.DEFAULT_WS_PORT = 3847;
+      exports.DEFAULT_PROXY_PORT = 3848;
+      exports.VIEWPORT_EVENT_CHANNEL = "viewportEventChannel";
+      exports.RESOURCE_OVERVIEW_URI = "viewport://session/overview";
+      exports.DEVICE_PRESETS = [
+        {
+          id: "iphone-17",
+          name: "iPhone 17",
+          width: 402,
+          height: 874,
+          deviceScaleFactor: 3,
+          userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "dynamic-island",
+          homeIndicatorType: "home-indicator"
+        },
+        {
+          id: "iphone-16",
+          name: "iPhone 16",
+          width: 393,
+          height: 852,
+          deviceScaleFactor: 3,
+          userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "dynamic-island",
+          homeIndicatorType: "home-indicator"
+        },
+        {
+          id: "iphone-15",
+          name: "iPhone 15",
+          width: 393,
+          height: 852,
+          deviceScaleFactor: 3,
+          userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "dynamic-island",
+          homeIndicatorType: "home-indicator"
+        },
+        {
+          id: "iphone-14",
+          name: "iPhone 14",
+          width: 390,
+          height: 844,
+          deviceScaleFactor: 3,
+          userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "notch",
+          homeIndicatorType: "home-indicator"
+        },
+        {
+          id: "iphone-se",
+          name: "iPhone SE",
+          width: 375,
+          height: 667,
+          deviceScaleFactor: 2,
+          userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "none",
+          homeIndicatorType: "none"
+        },
+        {
+          id: "pixel-9",
+          name: "Pixel 9",
+          width: 412,
+          height: 915,
+          deviceScaleFactor: 2.625,
+          userAgent: "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "pill",
+          homeIndicatorType: "gesture-bar"
+        },
+        {
+          id: "galaxy-s25",
+          name: "Galaxy S25",
+          width: 360,
+          height: 780,
+          deviceScaleFactor: 3,
+          userAgent: "Mozilla/5.0 (Linux; Android 15; SM-S931B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "hole-punch",
+          homeIndicatorType: "gesture-bar"
+        },
+        {
+          id: "galaxy-s24",
+          name: "Galaxy S24",
+          width: 360,
+          height: 780,
+          deviceScaleFactor: 3,
+          userAgent: "Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "hole-punch",
+          homeIndicatorType: "gesture-bar"
+        },
+        {
+          id: "ipad-mini",
+          name: "iPad Mini",
+          width: 768,
+          height: 1024,
+          deviceScaleFactor: 2,
+          userAgent: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "none",
+          homeIndicatorType: "none"
+        },
+        {
+          id: "ipad-air",
+          name: "iPad Air",
+          width: 820,
+          height: 1180,
+          deviceScaleFactor: 2,
+          userAgent: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+          hasTouch: true,
+          isMobile: true,
+          notchType: "none",
+          homeIndicatorType: "none"
+        }
+      ];
+      function createSessionId() {
+        return `vp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      }
+      function createEditId() {
+        return `edit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      }
+      var layoutAlign_1 = require_layoutAlign();
+      Object.defineProperty(exports, "LAYOUT_SNAP_STEP_PX", { enumerable: true, get: function() {
+        return layoutAlign_1.LAYOUT_SNAP_STEP_PX;
+      } });
+      Object.defineProperty(exports, "LAYOUT_SNAP_COARSE_PX", { enumerable: true, get: function() {
+        return layoutAlign_1.LAYOUT_SNAP_COARSE_PX;
+      } });
+      Object.defineProperty(exports, "POSITIONISH_STYLE_PROPS", { enumerable: true, get: function() {
+        return layoutAlign_1.POSITIONISH_STYLE_PROPS;
+      } });
+      Object.defineProperty(exports, "snapLayoutPx", { enumerable: true, get: function() {
+        return layoutAlign_1.snapLayoutPx;
+      } });
+      Object.defineProperty(exports, "parseCssPx", { enumerable: true, get: function() {
+        return layoutAlign_1.parseCssPx;
+      } });
+      Object.defineProperty(exports, "snapCssPxValue", { enumerable: true, get: function() {
+        return layoutAlign_1.snapCssPxValue;
+      } });
+      Object.defineProperty(exports, "snapCssBoxShorthand", { enumerable: true, get: function() {
+        return layoutAlign_1.snapCssBoxShorthand;
+      } });
+      Object.defineProperty(exports, "alignMoveOp", { enumerable: true, get: function() {
+        return layoutAlign_1.alignMoveOp;
+      } });
+      Object.defineProperty(exports, "alignStyleOpValue", { enumerable: true, get: function() {
+        return layoutAlign_1.alignStyleOpValue;
+      } });
+      var geometry_1 = require_geometry();
+      Object.defineProperty(exports, "screenInsetsFor", { enumerable: true, get: function() {
+        return geometry_1.screenInsetsFor;
+      } });
+      Object.defineProperty(exports, "devicePhoneGeometry", { enumerable: true, get: function() {
+        return geometry_1.devicePhoneGeometry;
+      } });
+      Object.defineProperty(exports, "insetPercentages", { enumerable: true, get: function() {
+        return geometry_1.insetPercentages;
+      } });
+    }
+  });
+
   // src/webview/bridge.ts
   var VSCODE_API = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : null;
   var IS_EXTENSION = !!VSCODE_API;
 
   // src/webview/devices.ts
-  var DEVICE_PRESETS = [
-    { id: "iphone-17", name: "iPhone 17", width: 402, height: 874, deviceScaleFactor: 3, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", hasTouch: true, isMobile: true },
-    { id: "iphone-16", name: "iPhone 16", width: 393, height: 852, deviceScaleFactor: 3, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", hasTouch: true, isMobile: true },
-    { id: "iphone-15", name: "iPhone 15", width: 393, height: 852, deviceScaleFactor: 3, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", hasTouch: true, isMobile: true },
-    { id: "iphone-14", name: "iPhone 14", width: 390, height: 844, deviceScaleFactor: 3, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1", hasTouch: true, isMobile: true },
-    { id: "iphone-se", name: "iPhone SE", width: 375, height: 667, deviceScaleFactor: 2, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1", hasTouch: true, isMobile: true },
-    { id: "pixel-9", name: "Pixel 9", width: 412, height: 915, deviceScaleFactor: 2.625, userAgent: "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36", hasTouch: true, isMobile: true },
-    { id: "galaxy-s25", name: "Galaxy S25", width: 360, height: 780, deviceScaleFactor: 3, userAgent: "Mozilla/5.0 (Linux; Android 15; SM-S931B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36", hasTouch: true, isMobile: true },
-    { id: "galaxy-s24", name: "Galaxy S24", width: 360, height: 780, deviceScaleFactor: 3, userAgent: "Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36", hasTouch: true, isMobile: true },
-    { id: "ipad-mini", name: "iPad Mini", width: 768, height: 1024, deviceScaleFactor: 2, userAgent: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", hasTouch: true, isMobile: true },
-    { id: "ipad-air", name: "iPad Air", width: 820, height: 1180, deviceScaleFactor: 2, userAgent: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", hasTouch: true, isMobile: true }
-  ];
+  var import_shared = __toESM(require_protocol());
 
   // src/webview/settings.ts
   var SETTINGS_KEY = "mvb-ui2-settings";
   var DEFAULT_SETTINGS = {
     showFrame: true,
     frameGlow: false,
+    frameStyle: "default",
     screenDim: 12,
     wheelZoom: true,
     dblclickReset: true,
@@ -32,7 +349,12 @@
     copyOnApply: true,
     showMcpPill: true,
     defaultUrl: "http://127.0.0.1:5173/",
-    toastMs: 2e3
+    toastMs: 2e3,
+    interactiveMode: false,
+    fullPageScale: false,
+    dprSimulation: false,
+    touchSimulation: false,
+    showNotch: true
   };
   function loadSettings() {
     try {
@@ -125,6 +447,81 @@
     screenEl.style.width = g.screenW + "px";
     screenEl.style.height = g.screenH + "px";
     screenEl.style.borderRadius = g.inset.radius;
+  }
+  function layoutNotch(notchEl, screenEl, g, isLandscape2 = false) {
+    if (!notchEl || !screenEl || !g.notch || g.notch.type === "none") {
+      if (notchEl) notchEl.style.display = "none";
+      return;
+    }
+    const screenW = g.screenW;
+    const screenH = g.screenH;
+    const notch = g.notch;
+    notchEl.style.display = "block";
+    notchEl.style.position = "absolute";
+    if (isLandscape2) {
+      const width = Math.round(screenW * notch.widthRatio);
+      const height = Math.round(screenH * notch.heightRatio);
+      const left = 0;
+      const top = Math.round((screenH - height) / 2);
+      notchEl.style.top = top + "px";
+      notchEl.style.left = left + "px";
+      notchEl.style.right = "auto";
+      notchEl.style.bottom = "auto";
+      notchEl.style.width = width + "px";
+      notchEl.style.height = height + "px";
+      notchEl.style.borderRadius = notch.borderRadius + "px";
+      notchEl.className = "device-notch notch-" + notch.type + " notch-landscape";
+    } else {
+      const width = Math.round(screenW * notch.widthRatio);
+      const height = Math.round(screenH * notch.heightRatio);
+      const top = Math.round(screenH * notch.topRatio);
+      const left = Math.round((screenW - width) / 2);
+      notchEl.style.top = top + "px";
+      notchEl.style.left = left + "px";
+      notchEl.style.right = "auto";
+      notchEl.style.bottom = "auto";
+      notchEl.style.width = width + "px";
+      notchEl.style.height = height + "px";
+      notchEl.style.borderRadius = notch.borderRadius + "px";
+      notchEl.className = "device-notch notch-" + notch.type;
+    }
+  }
+  function layoutHomeIndicator(indicatorEl, screenEl, g, isLandscape2 = false) {
+    if (!indicatorEl || !screenEl || !g.homeIndicator || g.homeIndicator.type === "none") {
+      if (indicatorEl) indicatorEl.style.display = "none";
+      return;
+    }
+    const screenW = g.screenW;
+    const screenH = g.screenH;
+    const hi = g.homeIndicator;
+    indicatorEl.style.display = "block";
+    indicatorEl.style.position = "absolute";
+    if (isLandscape2) {
+      const height = Math.round(screenH * hi.widthRatio);
+      const width = hi.height;
+      const right = hi.bottomOffset;
+      const top = Math.round((screenH - height) / 2);
+      indicatorEl.style.top = top + "px";
+      indicatorEl.style.right = right + "px";
+      indicatorEl.style.left = "auto";
+      indicatorEl.style.bottom = "auto";
+      indicatorEl.style.width = width + "px";
+      indicatorEl.style.height = height + "px";
+      indicatorEl.style.borderRadius = hi.borderRadius + "px";
+      indicatorEl.className = "device-home-indicator indicator-" + hi.type + " indicator-landscape";
+    } else {
+      const width = Math.round(screenW * hi.widthRatio);
+      const left = Math.round((screenW - width) / 2);
+      const bottom = hi.bottomOffset;
+      indicatorEl.style.bottom = bottom + "px";
+      indicatorEl.style.left = left + "px";
+      indicatorEl.style.right = "auto";
+      indicatorEl.style.top = "auto";
+      indicatorEl.style.width = width + "px";
+      indicatorEl.style.height = hi.height + "px";
+      indicatorEl.style.borderRadius = hi.borderRadius + "px";
+      indicatorEl.className = "device-home-indicator indicator-" + hi.type;
+    }
   }
   async function copyText(text) {
     try {
@@ -342,6 +739,88 @@
   }
 
   // src/webview/app/geometry.ts
+  function notchGeometryFor(device) {
+    const type = device.notchType || "none";
+    const w = device.width;
+    switch (type) {
+      case "dynamic-island":
+        return {
+          type,
+          widthRatio: 0.33,
+          heightRatio: 0.035,
+          topRatio: 0.012,
+          borderRadius: Math.round(w * 0.05)
+          // 约 20px @ 393px
+        };
+      case "notch":
+        return {
+          type,
+          widthRatio: 0.45,
+          heightRatio: 0.04,
+          topRatio: 0,
+          borderRadius: Math.round(w * 0.04)
+          // 底部圆角
+        };
+      case "pill":
+        return {
+          type,
+          widthRatio: 0.12,
+          heightRatio: 0.025,
+          topRatio: 0.015,
+          borderRadius: Math.round(w * 0.06)
+          // 全圆角
+        };
+      case "hole-punch":
+        return {
+          type,
+          widthRatio: 0.06,
+          heightRatio: 0.06,
+          topRatio: 0.018,
+          borderRadius: Math.round(w * 0.03)
+          // 正圆
+        };
+      case "none":
+      default:
+        return {
+          type: "none",
+          widthRatio: 0,
+          heightRatio: 0,
+          topRatio: 0,
+          borderRadius: 0
+        };
+    }
+  }
+  function homeIndicatorGeometryFor(device) {
+    const type = device.homeIndicatorType || "none";
+    const w = device.width;
+    switch (type) {
+      case "home-indicator":
+        return {
+          type,
+          widthRatio: 0.36,
+          height: 5,
+          bottomOffset: 8,
+          borderRadius: 3
+        };
+      case "gesture-bar":
+        return {
+          type,
+          widthRatio: 0.3,
+          height: 3,
+          bottomOffset: 6,
+          borderRadius: 2
+        };
+      case "none":
+      default:
+        return {
+          type: "none",
+          widthRatio: 0,
+          height: 0,
+          bottomOffset: 0,
+          borderRadius: 0
+        };
+    }
+  }
   function screenInsetsFor(device) {
     const isTablet = device.width / device.height > 0.65;
     return isTablet ? { top: 0.022, bottom: 0.02, left: 0.018, right: 0.018, radius: "4% / 3%" } : { top: 0.0105, bottom: 0.0115, left: 0.0145, right: 0.0145, radius: "10% / 5.2%" };
@@ -352,12 +831,18 @@
     const screenH = device.height;
     const shellW = Math.round(screenW / (1 - inset.left - inset.right));
     const shellH = Math.round(screenH / (1 - inset.top - inset.bottom));
-    return { device, inset, screenW, screenH, shellW, shellH };
+    const notch = notchGeometryFor(device);
+    const homeIndicator = homeIndicatorGeometryFor(device);
+    return { device, inset, screenW, screenH, shellW, shellH, notch, homeIndicator };
   }
 
   // src/webview/app/layout.ts
   var userPhoneZoom = 1;
   var lastFitScale = 1;
+  var isLandscape = false;
+  var dprSimulation = false;
+  var interactiveMode = false;
+  var showNotch = true;
   function sendHostToFrame(frameEl, type, payload) {
     try {
       if (frameEl && frameEl.contentWindow) {
@@ -372,21 +857,123 @@
     const wrap = document.getElementById("phoneZoomWrap");
     const stage = document.getElementById("phoneStage");
     const hint = document.getElementById("phoneScaleHint");
+    const notchEl = document.getElementById("notch");
+    const homeIndicatorEl = document.getElementById("homeIndicator");
     if (!phoneEl || !screenEl || !wrap || !stage) return;
     const g = devicePhoneGeometry(d);
     layoutPhoneShell(phoneEl, screenEl, g);
+    layoutNotch(notchEl, screenEl, g);
+    layoutHomeIndicator(homeIndicatorEl, screenEl, g);
+    if (notchEl) {
+      notchEl.style.display = showNotch ? "" : "none";
+    }
+    const frameEl = document.getElementById("frame");
+    if (frameEl) {
+      const dpr = dprSimulation ? d.deviceScaleFactor || 3 : 1;
+      if (isLandscape) {
+        const iframeW = g.screenW * dpr;
+        const iframeH = g.screenH * dpr;
+        frameEl.style.width = iframeW + "px";
+        frameEl.style.height = iframeH + "px";
+        frameEl.style.position = "absolute";
+        frameEl.style.left = Math.round((g.screenW - iframeW) / 2) + "px";
+        frameEl.style.top = Math.round((g.screenH - iframeH) / 2) + "px";
+        frameEl.style.right = "auto";
+        frameEl.style.bottom = "auto";
+        frameEl.style.transform = "rotate(90deg) scale(" + 1 / dpr + ")";
+        frameEl.style.transformOrigin = "center center";
+      } else {
+        if (dprSimulation) {
+          frameEl.style.width = g.screenW * dpr + "px";
+          frameEl.style.height = g.screenH * dpr + "px";
+          frameEl.style.position = "absolute";
+          frameEl.style.left = "0";
+          frameEl.style.top = "0";
+          frameEl.style.right = "auto";
+          frameEl.style.bottom = "auto";
+          frameEl.style.transform = "scale(" + 1 / dpr + ")";
+          frameEl.style.transformOrigin = "top left";
+        } else {
+          frameEl.style.width = "";
+          frameEl.style.height = "";
+          frameEl.style.left = "";
+          frameEl.style.top = "";
+          frameEl.style.right = "";
+          frameEl.style.bottom = "";
+          frameEl.style.transform = "";
+          frameEl.style.transformOrigin = "";
+        }
+      }
+      frameEl.style.pointerEvents = interactiveMode ? "auto" : "none";
+    }
+    if (isLandscape) {
+      phoneEl.classList.add("landscape");
+      wrap.classList.add("landscape");
+    } else {
+      phoneEl.classList.remove("landscape");
+      wrap.classList.remove("landscape");
+    }
     const padX = 48;
     const padY = 56;
     const maxW = Math.max(160, stage.clientWidth - padX);
     const maxH = Math.max(220, stage.clientHeight - padY);
-    lastFitScale = Math.min(1, maxW / g.shellW, maxH / g.shellH);
+    const displayW = isLandscape ? g.shellH : g.shellW;
+    const displayH = isLandscape ? g.shellW : g.shellH;
+    if (stage.clientWidth <= 0 || stage.clientHeight <= 0) {
+      let retry = 0;
+      const retryLayout = () => {
+        retry += 1;
+        if (retry > 5) return;
+        const w = Math.max(160, stage.clientWidth - padX);
+        const h = Math.max(220, stage.clientHeight - padY);
+        if (w <= 160 || h <= 220) {
+          requestAnimationFrame(retryLayout);
+          return;
+        }
+        const s = Math.min(1, w / displayW, h / displayH);
+        lastFitScale = s;
+        const scale2 = Math.max(0.2, s * userPhoneZoom);
+        wrap.style.width = Math.round(displayW * scale2) + "px";
+        wrap.style.height = Math.round(displayH * scale2) + "px";
+        wrap.style.overflow = "hidden";
+        applyPhoneTransform(phoneEl, scale2, g, isLandscape);
+        if (hint) hint.textContent = Math.round(scale2 * 100) + "%";
+      };
+      requestAnimationFrame(retryLayout);
+    }
+    lastFitScale = Math.min(1, maxW / displayW, maxH / displayH);
     const scale = Math.max(0.2, lastFitScale * userPhoneZoom);
-    wrap.style.width = Math.round(g.shellW * scale) + "px";
-    wrap.style.height = Math.round(g.shellH * scale) + "px";
+    wrap.style.width = Math.round(displayW * scale) + "px";
+    wrap.style.height = Math.round(displayH * scale) + "px";
     wrap.style.overflow = "hidden";
-    phoneEl.style.transform = "scale(" + scale + ")";
-    phoneEl.style.transformOrigin = "top left";
+    applyPhoneTransform(phoneEl, scale, g, isLandscape);
     if (hint) hint.textContent = Math.round(scale * 100) + "%";
+  }
+  function toggleLandscape() {
+    isLandscape = !isLandscape;
+    return isLandscape;
+  }
+  function setLandscape(value) {
+    isLandscape = value;
+  }
+  function setDprSimulation(value) {
+    dprSimulation = value;
+  }
+  function setInteractiveMode(value) {
+    interactiveMode = value;
+  }
+  function setShowNotch(value) {
+    showNotch = value;
+  }
+  function applyPhoneTransform(phoneEl, scale, g, landscape) {
+    phoneEl.style.left = "0";
+    phoneEl.style.top = "0";
+    phoneEl.style.transformOrigin = "top left";
+    if (landscape) {
+      phoneEl.style.transform = "scale(" + scale + ") translateY(" + g.shellW + "px) rotate(-90deg)";
+    } else {
+      phoneEl.style.transform = "scale(" + scale + ")";
+    }
   }
   function applyFullPageScale(_pageHeight) {
     const frameEl = document.getElementById("frame");
@@ -587,7 +1174,7 @@
       targetDoc.documentElement.className = "h-full";
       targetDoc.documentElement.style.cssText = "height:100%;width:100%;background:#0a1a1f;";
       targetDoc.body.className = "h-full";
-      targetDoc.body.style.cssText = "margin:0;background:#0a1a1f;overflow:hidden;height:100%;width:100%;";
+      targetDoc.body.style.cssText = "margin:0;background:#0a1a1f;overflow:auto;height:100%;width:100%;-webkit-overflow-scrolling:touch;";
       try {
         targetDoc.title = "\u60AC\u6D6E\u9884\u89C8";
       } catch (_) {
@@ -600,7 +1187,7 @@
       targetDoc.head.prepend(base);
       const boot2 = targetDoc.createElement("style");
       boot2.textContent = [
-        "html,body{background:#0a1a1f!important;color:#e2e8f0;height:100%;width:100%;margin:0;overflow:hidden}",
+        "html,body{background:#0a1a1f!important;color:#e2e8f0;height:100%;width:100%;margin:0;overflow:auto;-webkit-overflow-scrolling:touch}",
         "#pipToolsToggle{display:none!important}",
         "#pipPinBadge{display:none!important}"
       ].join("");
@@ -639,6 +1226,10 @@
       shell.style.top = "auto";
       shell.style.left = "auto";
       shell.style.transform = "none";
+      const notchEl = win.querySelector("#pipNotch");
+      const homeIndicatorEl = win.querySelector("#pipHomeIndicator");
+      layoutNotch(notchEl, screenEl, g);
+      layoutHomeIndicator(homeIndicatorEl, screenEl, g);
       if (scaleWrap) {
         const useZoom = typeof CSS !== "undefined" && CSS.supports && CSS.supports("zoom", "1");
         scaleWrap.style.position = "relative";
@@ -667,6 +1258,11 @@
       if (frameImg) {
         frameImg.style.visibility = settings.showFrame ? "visible" : "hidden";
         frameImg.classList.toggle("opacity-0", !settings.showFrame);
+        const styleKey = settings.frameStyle === "style1" ? "data-screen-style1" : "data-screen-default";
+        const newSrc = frameImg.getAttribute(styleKey);
+        if (newSrc && frameImg.getAttribute("src") !== newSrc) {
+          frameImg.setAttribute("src", newSrc);
+        }
       }
     };
     const observePipWindowResize = (win) => {
@@ -1450,7 +2046,7 @@
     const phoneFrame = $id("phoneFrame");
     const phoneOffline = $id("phoneOffline");
     function device() {
-      return DEVICE_PRESETS.find((d) => d.id === deviceId) || DEVICE_PRESETS[0];
+      return import_shared.DEVICE_PRESETS.find((d) => d.id === deviceId) || import_shared.DEVICE_PRESETS[0];
     }
     function notify(msg) {
       let el = document.querySelector(".toast");
@@ -1482,7 +2078,12 @@
         "copyOnApply: " + settings.copyOnApply,
         "showMcpPill: " + settings.showMcpPill,
         "toastMs: " + settings.toastMs,
-        "defaultUrl: " + settings.defaultUrl
+        "defaultUrl: " + settings.defaultUrl,
+        "interactiveMode: " + settings.interactiveMode,
+        "fullPageScale: " + settings.fullPageScale,
+        "dprSimulation: " + settings.dprSimulation,
+        "touchSimulation: " + settings.touchSimulation,
+        "showNotch: " + settings.showNotch
       ].join("\n");
     }
     function applySettings() {
@@ -1496,6 +2097,11 @@
       if (frameImg) {
         frameImg.classList.toggle("opacity-0", !settings.showFrame);
         frameImg.style.visibility = settings.showFrame ? "visible" : "hidden";
+        const styleKey = settings.frameStyle === "style1" ? "data-screen-style1" : "data-screen-default";
+        const newSrc = frameImg.getAttribute(styleKey);
+        if (newSrc && frameImg.getAttribute("src") !== newSrc) {
+          frameImg.setAttribute("src", newSrc);
+        }
       }
       if (phoneEl) {
         phoneEl.classList.toggle("phone-frame-glow", !!settings.frameGlow);
@@ -1512,6 +2118,31 @@
       if (mcp) mcp.classList.toggle("hidden", !settings.showMcpPill);
       if (summary) summary.textContent = settingsSummaryText();
       document.getElementById("btnApply").title = settings.copyOnApply ? "\u5E94\u7528\u5230\u4EE3\u7801\u5E76\u590D\u5236 MCP \u63D0\u793A\uFF08\u6F14\u793A\uFF09" : "\u5E94\u7528\u5230\u4EE3\u7801\uFF08\u6F14\u793A\uFF0C\u4E0D\u81EA\u52A8\u590D\u5236\uFF09";
+      setInteractiveMode(settings.interactiveMode);
+      setDprSimulation(settings.dprSimulation);
+      setShowNotch(settings.showNotch);
+      applyPhoneCanvasSize2(device());
+      syncTouchSimulationToFrame();
+      const btnInteractive2 = document.getElementById("btnInteractive");
+      if (btnInteractive2) {
+        btnInteractive2.classList.toggle("text-cyber-cyan", settings.interactiveMode);
+        btnInteractive2.classList.toggle("border-cyber-cyan/50", settings.interactiveMode);
+      }
+      const btnDprEl = document.getElementById("btnDpr");
+      if (btnDprEl) {
+        btnDprEl.classList.toggle("text-cyber-cyan", settings.dprSimulation);
+        btnDprEl.classList.toggle("border-cyber-cyan/50", settings.dprSimulation);
+      }
+      const btnTouchEl = document.getElementById("btnTouch");
+      if (btnTouchEl) {
+        btnTouchEl.classList.toggle("text-cyber-cyan", settings.touchSimulation);
+        btnTouchEl.classList.toggle("border-cyber-cyan/50", settings.touchSimulation);
+      }
+      const btnNotchEl = document.getElementById("btnNotch");
+      if (btnNotchEl) {
+        btnNotchEl.classList.toggle("text-cyber-cyan", settings.showNotch);
+        btnNotchEl.classList.toggle("border-cyber-cyan/50", settings.showNotch);
+      }
       if (pipOpen) layoutPipPhone();
     }
     function setSetting(key, value, toastLabel) {
@@ -1621,13 +2252,28 @@
       buildDemoSrc,
       getFrame: () => frame
     });
+    function updateTouchLabel() {
+      const label = document.getElementById("touchLabel");
+      if (!label) return;
+      if (settings.touchSimulation) {
+        label.textContent = "\u6A21\u62DF\u4E2D";
+        label.className = "text-cyber-cyan";
+        return;
+      }
+      const d = device();
+      label.textContent = d.hasTouch ? "\u673A\u578B\u652F\u6301" : "\u672A\u542F\u7528";
+      label.className = d.hasTouch ? "text-slate-300" : "text-slate-500";
+    }
+    function syncTouchSimulationToFrame() {
+      updateTouchLabel();
+      sendHostToFrame2("touchSimulation", { enabled: !!settings.touchSimulation });
+    }
     function syncDeviceChrome() {
       const d = device();
       sizeLabel.textContent = d.width + "\xD7" + d.height;
       document.getElementById("deviceLabel").textContent = d.name;
       document.getElementById("dprLabel").textContent = String(d.deviceScaleFactor);
-      document.getElementById("touchLabel").textContent = d.hasTouch ? "\u5DF2\u542F\u7528" : "\u672A\u542F\u7528";
-      document.getElementById("touchLabel").className = d.hasTouch ? "text-cyber-cyan" : "text-slate-500";
+      updateTouchLabel();
       deviceSelect.value = d.id;
       applyPhoneCanvasSize2(d);
       if (pipOpen) layoutPipPhone();
@@ -1639,19 +2285,33 @@
         syncPipContent();
       }
     }
+    function framePointerEvents() {
+      return settings.interactiveMode || mode === "inspect" ? "auto" : "none";
+    }
     function applyConfigure(msg) {
       if (!msg) return;
       if (msg.deviceId) deviceId = String(msg.deviceId);
       if (msg.url) urlInput.value = String(msg.url);
+      if (typeof msg.landscape === "boolean" && msg.landscape !== isLandscape) {
+        setLandscape(msg.landscape);
+        const btnRotateEl = document.getElementById("btnRotate");
+        if (btnRotateEl) {
+          btnRotateEl.classList.toggle("text-cyber-cyan", msg.landscape);
+          btnRotateEl.classList.toggle("border-cyber-cyan/50", msg.landscape);
+        }
+      }
       currentProxyUrl = String(msg.proxyUrl || msg.url || "");
       syncDeviceChrome();
       if (!currentProxyUrl) return;
       loaded = true;
       emptyHint.classList.add("hidden");
       frame.classList.remove("pointer-events-none");
-      frame.style.pointerEvents = "auto";
+      frame.style.pointerEvents = framePointerEvents();
       frame.removeAttribute("srcdoc");
       frame.src = withCacheBust(currentProxyUrl);
+      applyPhoneCanvasSize2(device());
+      setTimeout(() => syncTouchSimulationToFrame(), 300);
+      setTimeout(() => syncTouchSimulationToFrame(), 1e3);
       if (pipOpen) {
         layoutPipPhone();
         syncPipContent();
@@ -1664,20 +2324,60 @@
     function sendHostToFrame2(type, payload) {
       sendHostToFrame(frame, type, payload);
     }
+    let lastPageHeight = 0;
+    let pageHeightTimer = null;
     function applyPhoneCanvasSize2(d) {
       applyPhoneCanvasSize(d);
+      if (frame) frame.style.pointerEvents = framePointerEvents();
+      if (settings.fullPageScale && lastPageHeight > d.height) {
+        applyFullPageScaleTransform(lastPageHeight);
+      }
     }
     function applyFullPageScale2(pageHeight) {
-      applyFullPageScale(pageHeight);
+      if (typeof pageHeight === "number" && pageHeight > 0) {
+        lastPageHeight = pageHeight;
+      }
+      const d = device();
+      if (!settings.fullPageScale) {
+        applyFullPageScale();
+        applyPhoneCanvasSize(d);
+        return;
+      }
+      applyFullPageScaleTransform(lastPageHeight || pageHeight || 0);
+    }
+    function applyFullPageScaleTransform(pageHeight) {
+      const d = device();
+      const frameEl = document.getElementById("frame");
+      const pipFrameEl = document.getElementById("pipFrame");
+      const actualHeight = Math.max(0, pageHeight || 0);
+      if (!frameEl) return;
+      if (actualHeight <= d.height || actualHeight === 0) {
+        applyFullPageScale();
+        applyPhoneCanvasSize(d);
+        return;
+      }
+      const scale = d.height / actualHeight;
+      frameEl.style.width = d.width + "px";
+      frameEl.style.height = actualHeight + "px";
+      frameEl.style.transformOrigin = "top left";
+      frameEl.style.transform = "scale(" + scale + ")";
+      if (pipFrameEl) {
+        pipFrameEl.style.width = d.width + "px";
+        pipFrameEl.style.height = actualHeight + "px";
+        pipFrameEl.style.transformOrigin = "top left";
+        pipFrameEl.style.transform = "scale(" + scale + ")";
+      }
     }
     function buildDemoSrc() {
       const d = device();
       const url = urlInput.value;
-      return `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${d.width},initial-scale=1,maximum-scale=1,user-scalable=no"/>
+      const vw = isLandscape ? d.height : d.width;
+      const vh = isLandscape ? d.width : d.height;
+      return `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=${vw},initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{overflow:hidden!important;overscroll-behavior:none!important}
-  body{font-family:system-ui,sans-serif;background:#0b1220;color:#e2e8f0;padding:20px 16px}
+  html,body{width:100%;min-width:100%;min-height:100%;height:auto;overflow:auto;overscroll-behavior:contain}
+  body{font-family:system-ui,sans-serif;background:#0b1220;color:#e2e8f0;padding:20px 16px;-webkit-overflow-scrolling:touch}
   .hero{font-size:20px;font-weight:700;margin-bottom:6px;cursor:crosshair;border-radius:6px;outline-offset:3px}
   .sub{font-size:11px;opacity:.6;margin-bottom:16px;word-break:break-all}
   .card{background:#13222a;border:1px solid rgba(77,238,234,.3);border-radius:14px;padding:14px;margin-bottom:12px;cursor:crosshair;outline-offset:3px;transition:outline .12s,box-shadow .12s}
@@ -1691,12 +2391,14 @@
   <div class="sub">${url}</div>
   <div class="card" id="c1" data-sel="div.card#overview" data-text="\u4ECA\u65E5\u6982\u89C8 \u2014 \u70B9\u6211\u9009\u4E2D" data-color="#4deeea" data-fs="14px" data-fw="500" data-w="auto" data-h="auto" data-dis="block" data-br="14px" data-margin="0 0 12px" data-padding="14px">
 <span class="chip">${d.name}</span>
-<span class="chip">${d.width}\xD7${d.height}</span>
+<span class="chip">${vw}\xD7${vh}${isLandscape ? " \xB7 \u6A2A\u5C4F" : ""}</span>
 <div style="margin-top:10px;font-size:14px;color:#4deeea" id="c1text" data-edit-text>\u4ECA\u65E5\u6982\u89C8 \u2014 \u70B9\u6211\u9009\u4E2D</div>
   </div>
-  <div class="card" id="c2" data-sel="div.card#cta" data-text="\u5F00\u59CB\u4F53\u9A8C" data-color="#0a1a1f" data-fs="15px" data-fw="700" data-w="auto" data-h="auto" data-dis="block" data-br="10px" data-margin="0" data-padding="0">
+  <div class="card" id="c2" data-sel="div.card#cta" data-text="\u5F00\u59CB\u4F53\u9A8C" data-color="#0a1a1f" data-fs="15px" data-fw="700" data-w="auto" data-h="auto" data-dis="block" data-br="10px" data-margin="0 0 12px" data-padding="0">
 <div id="c2text" data-edit-text style="background:#4deeea;color:#0a1a1f;text-align:center;padding:10px;border-radius:10px;font-weight:700;font-size:15px">\u5F00\u59CB\u4F53\u9A8C</div>
   </div>
+  <div class="card"><div style="font-size:13px;line-height:1.6">\u{1F4F1} \u6EDA\u52A8\u6D4B\u8BD5\u533A \u2014 \u9F20\u6807\u6EDA\u8F6E / \u89E6\u63A7\u677F\u4E0A\u4E0B\u6EDA\u52A8\u5373\u53EF\u5728\u624B\u673A\u5185\u6D4F\u89C8\u957F\u9875\u9762\uFF0C\u4E0E\u771F\u5B9E\u624B\u673A\u6D4F\u89C8\u5668\u4E00\u81F4\u3002</div></div>
+  ${Array.from({ length: 6 }, (_, i) => `<div class="card"><span class="chip">\u5361\u7247 ${i + 1}</span><div style="margin-top:8px;font-size:13px;line-height:1.5">\u8FD9\u662F\u7B2C ${i + 1} \u6BB5\u793A\u4F8B\u5185\u5BB9\uFF0C\u7528\u6765\u6F14\u793A\u9875\u9762\u5728\u624B\u673A\u5C4F\u5E55\u5185\u7684\u81EA\u7136\u6EDA\u52A8\u884C\u4E3A\u3002\u5B9E\u9645\u4F7F\u7528\u65F6\uFF0C\u628A\u9884\u89C8 URL \u66FF\u6362\u6210\u4F60\u81EA\u5DF1\u7684\u9875\u9762\u5373\u53EF\u3002</div></div>`).join("")}
 <script>
   let current = null;
   function mark(sel){
@@ -1734,9 +2436,37 @@ el.addEventListener('click',e=>{
   emit(el);
 });
   });
+  let touchSimStyle = null;
+  let touchNavPatched = false;
+  function setTouchSimulation(enabled){
+    var root = document.documentElement;
+    try {
+      if (enabled && !touchNavPatched) {
+        Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, get: function(){ return 5; } });
+        if (!('ontouchstart' in window)) { try { window.ontouchstart = null; } catch(_){} }
+        touchNavPatched = true;
+      }
+    } catch(_){}
+    if (enabled) {
+      if (root) root.classList.add('mvb-touch-sim');
+      if (touchSimStyle) return;
+      touchSimStyle = document.createElement('style');
+      touchSimStyle.setAttribute('data-mvb','touch-simulation');
+      touchSimStyle.textContent = 'html.mvb-touch-sim,html.mvb-touch-sim *{-webkit-tap-highlight-color:transparent!important;touch-action:manipulation!important}html.mvb-touch-sim *:hover{cursor:pointer!important;transition:none!important;transform:none!important;filter:none!important;box-shadow:none!important;outline:none!important;text-decoration:inherit!important}';
+      if (root) root.appendChild(touchSimStyle);
+    } else {
+      if (root) root.classList.remove('mvb-touch-sim');
+      if (touchSimStyle && touchSimStyle.parentNode) touchSimStyle.parentNode.removeChild(touchSimStyle);
+      touchSimStyle = null;
+    }
+  }
   window.addEventListener('message',e=>{
 const m = e.data;
 if(!m) return;
+if(m.source==='mvb-host' && m.type==='touchSimulation'){
+  setTouchSimulation(!!(m.payload && m.payload.enabled));
+  return;
+}
 if(m.type==='inspect-highlight' && m.sel){ mark(m.sel); return; }
 if(m.type==='inspect-clear'){
   document.querySelectorAll('[data-sel]').forEach(n=>n.classList.remove('on','hov'));
@@ -1769,10 +2499,8 @@ if(m.type==='inspect-apply' && m.sel){
   parent.postMessage({ type:'inspect-applied', sel: m.sel }, '*');
 }
   });
-  window.addEventListener('wheel', (e) => {
-e.preventDefault();
-parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
-  }, { passive: false });
+  // wheel inside the demo iframe now scrolls natively (like a real phone browser).
+  // Zoom control is handled at the host level (outside the phone screen).
 <\/script>
 </body></html>`;
     }
@@ -1806,7 +2534,7 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
         return;
       }
       if (mode === "devices") {
-        DEVICE_PRESETS.forEach((d) => {
+        import_shared.DEVICE_PRESETS.forEach((d) => {
           const row = document.createElement("button");
           row.type = "button";
           row.className = "mode-nav-item" + (d.id === deviceId ? " is-active" : "");
@@ -1990,8 +2718,19 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
         tip.textContent = "\u504F\u597D\u5373\u65F6\u751F\u6548\uFF0C\u5E76\u4FDD\u5B58\u5230\u672C\u673A localStorage\u3002";
         modeList.appendChild(tip);
         addSection2("\u753B\u5E03");
-        addToggle2("showFrame", "\u624B\u673A\u5916\u6846", "\u663E\u793A ui-screen.png \u673A\u6846");
+        addToggle2("showFrame", "\u624B\u673A\u5916\u6846", "\u663E\u793A\u673A\u6846\u56FE");
         addToggle2("frameGlow", "\u673A\u6846\u9AD8\u4EAE\u63CF\u8FB9", "phone-frame-glow");
+        const frameStyleBtn = document.createElement("button");
+        frameStyleBtn.type = "button";
+        frameStyleBtn.className = "setting-row mx-2";
+        frameStyleBtn.style.width = "calc(100% - 1rem)";
+        const frameStyleLabel = settings.frameStyle === "style1" ? "\u65B0\u6846 (ui-screen1)" : "\u9ED8\u8BA4\u6846 (ui-screen)";
+        frameStyleBtn.innerHTML = '<div class="min-w-0"><div class="text-xs text-slate-200">\u624B\u673A\u6846\u6837\u5F0F</div><div class="meta">\u70B9\u51FB\u5207\u6362\u673A\u6846\u56FE</div></div><span class="text-[11px] font-mono text-cyber-cyan shrink-0">' + frameStyleLabel + "</span>";
+        frameStyleBtn.addEventListener("click", () => {
+          const next = settings.frameStyle === "style1" ? "default" : "style1";
+          setSetting("frameStyle", next, "\u624B\u673A\u6846 \xB7 " + (next === "style1" ? "\u65B0\u6846" : "\u9ED8\u8BA4\u6846"));
+        });
+        modeList.appendChild(frameStyleBtn);
         addToggle2("showZoomBar", "\u7F29\u653E\u63A7\u4EF6", "\u53F3\u4E0B\u89D2 + / \u2212 / \u91CD\u7F6E");
         addToggle2("wheelZoom", "\u6EDA\u8F6E\u7F29\u653E", "\u6307\u9488\u5728\u753B\u5E03\u4E0A\u65F6\u6EDA\u8F6E\u7F29\u653E");
         addToggle2("dblclickReset", "\u53CC\u51FB\u91CD\u7F6E\u7F29\u653E", "\u53CC\u51FB\u753B\u5E03\u56DE\u5230 100%");
@@ -2011,6 +2750,12 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
         addToggle2("autoLoadInspect", "\u68C0\u67E5\u65F6\u81EA\u52A8\u52A0\u8F7D", "\u8FDB\u5165\u68C0\u67E5\u6A21\u5F0F\u81EA\u52A8\u52A0\u8F7D\u6F14\u793A\u9875");
         addToggle2("mergePending", "\u5408\u5E76\u540C\u9009\u62E9\u5668", "\u5199\u5165 pending \u65F6\u5408\u5E76 ops");
         addToggle2("copyOnApply", "\u5E94\u7528\u65F6\u590D\u5236 MCP", "\u300C\u5E94\u7528\u5230\u4EE3\u7801\u300D\u81EA\u52A8\u590D\u5236\u63D0\u793A\u8BCD");
+        addSection2("\u9884\u89C8\u4F53\u9A8C");
+        addToggle2("interactiveMode", "\u53EF\u4EA4\u4E92\u6A21\u5F0F", "\u5141\u8BB8 iframe \u6EDA\u52A8\u548C\u70B9\u51FB");
+        addToggle2("fullPageScale", "\u6574\u9875\u7F29\u653E", "\u628A\u957F\u9875\u7B49\u6BD4\u538B\u8FDB\u4E00\u5C4F\uFF08\u9ED8\u8BA4\u5173\xB7\u771F\u673A\u6EDA\u52A8\uFF09");
+        addToggle2("dprSimulation", "DPR \u9AD8\u5206\u8FA8\u7387", "\u6309\u8BBE\u5907\u50CF\u7D20\u6BD4\u6E32\u67D3\uFF0C\u66F4\u63A5\u8FD1\u771F\u673A");
+        addToggle2("touchSimulation", "\u89E6\u63A7\u6A21\u62DF", "\u7981\u7528 hover \u6548\u679C\uFF0C\u6A21\u62DF\u79FB\u52A8\u7AEF");
+        addToggle2("showNotch", "\u7075\u52A8\u5C9B/\u5218\u6D77", "\u663E\u793A\u5C4F\u5E55\u9876\u90E8\u7684\u5218\u6D77\u6216\u7075\u52A8\u5C9B");
         addSection2("\u754C\u9762");
         addToggle2("showMcpPill", "MCP \u6807\u7B7E", "\u5DE6\u4FA7\u6807\u9898\u65C1 MCP demo");
         const toastBtn = document.createElement("button");
@@ -2237,16 +2982,18 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
       loaded = true;
       emptyHint.classList.add("hidden");
       frame.classList.remove("pointer-events-none");
-      frame.style.pointerEvents = "auto";
+      frame.style.pointerEvents = framePointerEvents();
       frame.removeAttribute("src");
       frame.srcdoc = buildDemoSrc();
+      applyPhoneCanvasSize2(device());
+      setTimeout(() => syncTouchSimulationToFrame(), 50);
       if (pipOpen) {
         layoutPipPhone();
         syncPipContent();
       }
       if (announce !== false) notify("\u9884\u89C8\u5DF2\u52A0\u8F7D\u5230\u624B\u673A\u5C4F\u5E55\u5185");
     }
-    DEVICE_PRESETS.forEach((d) => {
+    import_shared.DEVICE_PRESETS.forEach((d) => {
       const opt = document.createElement("option");
       opt.value = d.id;
       opt.textContent = d.name + " (" + d.width + "\xD7" + d.height + ")";
@@ -2440,10 +3187,101 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
       if (mode === "settings") renderModeList();
       notify("\u5DF2\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E");
     });
+    const btnRotate = document.getElementById("btnRotate");
+    if (btnRotate) {
+      btnRotate.addEventListener("click", () => {
+        const newLandscape = toggleLandscape();
+        applyPhoneCanvasSize2(device());
+        btnRotate.classList.toggle("text-cyber-cyan", newLandscape);
+        btnRotate.classList.toggle("border-cyber-cyan/50", newLandscape);
+        if (pipOpen) pipMgr.handleDeviceChange();
+        if (IS_EXTENSION && loaded) {
+          VSCODE_API.postMessage({ type: "orientation_change", landscape: newLandscape });
+        } else if (loaded) {
+          loadPreview(false);
+        }
+        notify(newLandscape ? "\u5DF2\u5207\u6362\u4E3A\u6A2A\u5C4F \xB7 \u89C6\u53E3\u5DF2\u6309\u957F\u8FB9\u91CD\u8F7D" : "\u5DF2\u5207\u6362\u4E3A\u7AD6\u5C4F \xB7 \u89C6\u53E3\u5DF2\u91CD\u8F7D");
+      });
+    }
     document.getElementById("btnPip").addEventListener("click", () => {
       if (pipOpen && !pipDetachMode) closePip();
       else openPip();
     });
+    const btnInteractive = document.getElementById("btnInteractive");
+    if (btnInteractive) {
+      btnInteractive.classList.toggle("text-cyber-cyan", settings.interactiveMode);
+      btnInteractive.classList.toggle("border-cyber-cyan/50", settings.interactiveMode);
+      setInteractiveMode(settings.interactiveMode);
+      btnInteractive.addEventListener("click", () => {
+        const next = !settings.interactiveMode;
+        settings.interactiveMode = next;
+        persistSettings(settings);
+        setInteractiveMode(next);
+        applyPhoneCanvasSize2(device());
+        if (frame) {
+          frame.style.pointerEvents = next || mode === "inspect" ? "auto" : "none";
+          frame.classList.toggle("pointer-events-none", !(next || mode === "inspect"));
+        }
+        btnInteractive.classList.toggle("text-cyber-cyan", next);
+        btnInteractive.classList.toggle("border-cyber-cyan/50", next);
+        notify(next ? "\u53EF\u4EA4\u4E92\u6A21\u5F0F \xB7 \u5F00\uFF08\u6EDA\u8F6E\u6EDA\u52A8\u9875\u9762\uFF0C\u8FB9\u7F18\u53EF\u7F29\u653E\u753B\u5E03\uFF09" : "\u53EF\u4EA4\u4E92\u6A21\u5F0F \xB7 \u5173");
+      });
+    }
+    const btnDpr = document.getElementById("btnDpr");
+    if (btnDpr) {
+      btnDpr.classList.toggle("text-cyber-cyan", settings.dprSimulation);
+      btnDpr.classList.toggle("border-cyber-cyan/50", settings.dprSimulation);
+      setDprSimulation(settings.dprSimulation);
+      btnDpr.addEventListener("click", () => {
+        const next = !settings.dprSimulation;
+        settings.dprSimulation = next;
+        persistSettings(settings);
+        setDprSimulation(next);
+        applyPhoneCanvasSize2(device());
+        btnDpr.classList.toggle("text-cyber-cyan", next);
+        btnDpr.classList.toggle("border-cyber-cyan/50", next);
+        notify(next ? "DPR \u9AD8\u5206\u8FA8\u7387 \xB7 \u5F00" : "DPR \u9AD8\u5206\u8FA8\u7387 \xB7 \u5173");
+      });
+    }
+    const btnTouch = document.getElementById("btnTouch");
+    if (btnTouch) {
+      btnTouch.classList.toggle("text-cyber-cyan", settings.touchSimulation);
+      btnTouch.classList.toggle("border-cyber-cyan/50", settings.touchSimulation);
+      btnTouch.addEventListener("click", () => {
+        const next = !settings.touchSimulation;
+        settings.touchSimulation = next;
+        if (next && !settings.interactiveMode) {
+          settings.interactiveMode = true;
+          setInteractiveMode(true);
+          const btnInteractive2 = document.getElementById("btnInteractive");
+          if (btnInteractive2) {
+            btnInteractive2.classList.toggle("text-cyber-cyan", true);
+            btnInteractive2.classList.toggle("border-cyber-cyan/50", true);
+          }
+        }
+        persistSettings(settings);
+        btnTouch.classList.toggle("text-cyber-cyan", next);
+        btnTouch.classList.toggle("border-cyber-cyan/50", next);
+        syncTouchSimulationToFrame();
+        notify(next ? "\u89E6\u63A7\u6A21\u62DF \xB7 \u5F00\uFF08\u5DF2\u8054\u52A8\u53EF\u4EA4\u4E92\uFF09" : "\u89E6\u63A7\u6A21\u62DF \xB7 \u5173");
+      });
+    }
+    const btnNotch = document.getElementById("btnNotch");
+    if (btnNotch) {
+      btnNotch.classList.toggle("text-cyber-cyan", settings.showNotch);
+      btnNotch.classList.toggle("border-cyber-cyan/50", settings.showNotch);
+      setShowNotch(settings.showNotch);
+      btnNotch.addEventListener("click", () => {
+        const next = !settings.showNotch;
+        settings.showNotch = next;
+        persistSettings(settings);
+        setShowNotch(next);
+        applyPhoneCanvasSize2(device());
+        btnNotch.classList.toggle("text-cyber-cyan", next);
+        btnNotch.classList.toggle("border-cyber-cyan/50", next);
+        notify(next ? "\u7075\u52A8\u5C9B \xB7 \u663E\u793A" : "\u7075\u52A8\u5C9B \xB7 \u9690\u85CF");
+      });
+    }
     function supportsDocPip() {
       return pipMgr.supportsDocPip();
     }
@@ -2587,9 +3425,12 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
             mcp.textContent = "Picker ON";
             mcp.classList.add("border-emerald-400/50");
           }
+          syncTouchSimulationToFrame();
         }
         if (msg.type === "page_height" && msg.payload) {
-          applyFullPageScale2(msg.payload.height);
+          const h = Number(msg.payload.height) || 0;
+          if (pageHeightTimer) clearTimeout(pageHeightTimer);
+          pageHeightTimer = setTimeout(() => applyFullPageScale2(h), 100);
         }
         return;
       }
@@ -2692,6 +3533,8 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
       applyPhoneCanvasSize2(device());
       document.body.classList.remove("js-pre-init");
     });
+    setTimeout(() => applyPhoneCanvasSize2(device()), 80);
+    setTimeout(() => applyPhoneCanvasSize2(device()), 400);
     if (IS_EXTENSION) {
       const mcp = document.getElementById("mcpPill");
       if (mcp) mcp.textContent = "MCP \u2026";
@@ -2716,8 +3559,40 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
         return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
       }
       document.addEventListener("wheel", (e) => {
+        const screenEl = document.getElementById("screen");
+        let overScreen = false;
+        if (screenEl) {
+          const sr = screenEl.getBoundingClientRect();
+          overScreen = e.clientX >= sr.left && e.clientX <= sr.right && e.clientY >= sr.top && e.clientY <= sr.bottom;
+        }
+        if (overScreen && (settings.interactiveMode || mode === "inspect")) {
+          try {
+            const win = frame && frame.contentWindow;
+            if (win) {
+              const doc = win.document;
+              const se = doc.scrollingElement || doc.documentElement || doc.body;
+              if (se) {
+                const beforeTop = se.scrollTop;
+                const beforeLeft = se.scrollLeft;
+                se.scrollTop += e.deltaY;
+                se.scrollLeft += e.deltaX;
+                if (se.scrollTop === beforeTop && se.scrollLeft === beforeLeft) {
+                  win.scrollBy(e.deltaX, e.deltaY);
+                }
+              } else {
+                win.scrollBy(e.deltaX, e.deltaY);
+              }
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
+          } catch (_) {
+          }
+          return;
+        }
         if (!settings.wheelZoom) return;
         if (!isOverStage(e.clientX, e.clientY)) return;
+        if (overScreen) return;
         e.preventDefault();
         e.stopPropagation();
         zoomByDelta(e.deltaY || e.deltaX);
@@ -2737,7 +3612,7 @@ parent.postMessage({ type: 'phone-zoom', deltaY: e.deltaY }, '*');
       window.addEventListener("message", (e) => {
         const msg = e.data;
         if (msg && msg.type === "phone-zoom") {
-          if (!settings.wheelZoom) return;
+          if (!settings.wheelZoom || settings.interactiveMode || mode === "inspect") return;
           zoomByDelta(msg.deltaY || 0);
         }
       });

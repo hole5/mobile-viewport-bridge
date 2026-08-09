@@ -87,8 +87,23 @@
         </button>
         <select id="deviceSelect" class="preview-toolbar-device bg-black/40 border border-cyber-border rounded px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-cyber-cyan/50"></select>
         <span id="sizeLabel" class="text-xs text-slate-500 font-mono">390×844</span>
+        <button type="button" id="btnRotate" class="bg-black/40 border border-cyber-border text-slate-200 px-2 py-1.5 rounded text-sm hover:border-cyber-cyan/50" title="横竖屏切换">
+          <span class="material-symbols-outlined text-lg leading-none align-middle">screen_rotation</span>
+        </button>
         <button type="button" id="btnPip" class="bg-black/40 border border-cyber-border text-slate-200 px-2 py-1.5 rounded text-sm hover:border-cyber-cyan/50" title="打开/关闭悬浮预览">
           <span class="material-symbols-outlined text-lg leading-none align-middle">picture_in_picture_alt</span>
+        </button>
+        <button type="button" id="btnInteractive" class="bg-black/40 border border-cyber-border text-slate-200 px-2 py-1.5 rounded text-sm hover:border-cyber-cyan/50" title="可交互模式（允许滚动/点击）">
+          <span class="material-symbols-outlined text-lg leading-none align-middle">touch_app</span>
+        </button>
+        <button type="button" id="btnDpr" class="bg-black/40 border border-cyber-border text-slate-200 px-2 py-1.5 rounded text-sm hover:border-cyber-cyan/50" title="DPR 高分辨率模拟">
+          <span class="material-symbols-outlined text-lg leading-none align-middle">high_quality</span>
+        </button>
+        <button type="button" id="btnTouch" class="bg-black/40 border border-cyber-border text-slate-200 px-2 py-1.5 rounded text-sm hover:border-cyber-cyan/50" title="触控模拟（禁用 hover）">
+          <span class="material-symbols-outlined text-lg leading-none align-middle">pan_tool</span>
+        </button>
+        <button type="button" id="btnNotch" class="bg-black/40 border border-cyber-border text-slate-200 px-2 py-1.5 rounded text-sm hover:border-cyber-cyan/50" title="显示/隐藏灵动岛和刘海">
+          <span class="material-symbols-outlined text-lg leading-none align-middle">rectangle</span>
         </button>
         <span class="preview-toolbar-spacer" aria-hidden="true"></span>
         <span id="pendingBadge" class="text-xs px-2.5 py-1 rounded-full bg-black/40 border border-cyber-border text-slate-400" title="查看 Pending 队列">pending: 0</span>
@@ -105,7 +120,7 @@
           <button type="button" id="btnZoomIn" class="w-6 h-6 rounded text-slate-300 hover:text-cyber-cyan hover:bg-white/10 text-sm leading-none" title="放大">+</button>
           <button type="button" id="btnZoomReset" class="ml-0.5 px-1.5 h-6 rounded text-[10px] text-slate-500 hover:text-cyber-cyan hover:bg-white/10" title="重置">重置</button>
         </div>
-        <!-- 缩放作用在 wrap，避免与 filter 冲突 -->
+        <!-- 缩放作用在 wrap，避免与 filter 冲突；初始占位由 boot→applyPhoneCanvasSize 动态刷新 -->
         <div id="phoneZoomWrap" class="relative will-change-transform" style="width: 280px; height: 607px;">
           <div
             id="phone"
@@ -115,6 +130,8 @@
           <img
             id="phoneFrame"
             src="__WV_SCREEN__"
+            data-screen-default="__WV_SCREEN__"
+            data-screen-style1="__WV_SCREEN1__"
             alt="phone frame"
             draggable="false"
             class="absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-[1]"
@@ -123,17 +140,21 @@
             <p class="text-xs text-slate-400">机框图加载失败</p>
             <button type="button" id="btnRetry3d" class="px-3 py-1.5 rounded bg-cyber-cyan/80 text-black text-xs font-bold">重试</button>
           </div>
-          <!-- 屏幕开孔：半透明编辑区，贴齐内屏 -->
+          <!-- 屏幕开孔：位置/尺寸由 applyPhoneCanvasSize→layoutPhoneShell 动态注入，与当前设备严格对齐 -->
           <div
             id="screen"
             class="absolute z-[2] overflow-hidden bg-black/12"
-            style="top: 1.05%; left: 1.45%; right: 1.45%; bottom: 1.15%; border-radius: 10% / 5.2%;"
+            style="top: 9px; left: 6px; width: 390px; height: 844px; border-radius: 40px / 44px;"
           >
-            <iframe id="frame" title="viewport-preview" class="absolute inset-0 w-full h-full border-0 bg-transparent pointer-events-none" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+            <iframe id="frame" title="viewport-preview" class="absolute inset-0 w-full h-full border-0 bg-transparent pointer-events-none" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
             <div id="emptyHint" class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-100/85 text-xs bg-black/20 backdrop-blur-[1px] pointer-events-none">
               <div class="w-2 h-2 rounded-full bg-cyber-cyan/80 animate-pulse"></div>
               点击「加载」在手机内预览
             </div>
+            <!-- 顶部刘海/打孔：类型和尺寸由设备预设决定 -->
+            <div id="notch" class="device-notch hidden pointer-events-none z-10"></div>
+            <!-- 底部导航条：Home Indicator / 手势条 -->
+            <div id="homeIndicator" class="device-home-indicator hidden pointer-events-none z-10"></div>
           </div>
           </div>
         </div>
@@ -290,17 +311,21 @@
         <div id="pipBody">
           <div id="pipPhoneScaleWrap" style="width: 405px; height: 871px; position: relative; overflow: hidden;">
           <div id="pipPhoneShell" style="width: 405px; height: 871px; position: relative;">
-            <img id="pipPhoneFrame" src="__WV_SCREEN__" alt="phone frame" draggable="false" />
+            <img id="pipPhoneFrame" src="__WV_SCREEN__" data-screen-default="__WV_SCREEN__" data-screen-style1="__WV_SCREEN1__" alt="phone frame" draggable="false" />
             <div
               id="pipScreen"
               class="absolute overflow-hidden bg-black/12"
               style="top: 9px; left: 6px; width: 393px; height: 852px; border-radius: 10% / 5.2%;"
             >
-              <iframe id="pipFrame" title="pip-preview" class="absolute inset-0 w-full h-full border-0 bg-transparent" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+              <iframe id="pipFrame" title="pip-preview" class="absolute inset-0 w-full h-full border-0 bg-transparent" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
               <div id="pipEmpty" class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-200/80 text-[11px] bg-black/25 pointer-events-none">
                 <div class="w-1.5 h-1.5 rounded-full bg-cyber-cyan/80 animate-pulse"></div>
                 <span id="pipEmptyText">加载预览中…</span>
               </div>
+              <!-- PiP 顶部刘海/打孔 -->
+              <div id="pipNotch" class="device-notch hidden pointer-events-none z-10"></div>
+              <!-- PiP 底部导航条 -->
+              <div id="pipHomeIndicator" class="device-home-indicator hidden pointer-events-none z-10"></div>
             </div>
           </div>
           </div>

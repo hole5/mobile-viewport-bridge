@@ -42,6 +42,12 @@ async function buildWebview() {
     throw new Error('Missing ui-screen.png in src/webview/assets');
   }
 
+  // 复制备选手机框 ui-screen1.png
+  const screen1Src = path.join(wvSrc, 'assets', 'ui-screen1.png');
+  if (fs.existsSync(screen1Src)) {
+    fs.copyFileSync(screen1Src, path.join(wvOut, 'ui-screen1.png'));
+  }
+
   console.log('bundled media/webview/app.js');
 }
 
