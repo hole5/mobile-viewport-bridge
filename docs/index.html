@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mobile Viewport Bridge — Product</title>
+  <meta name="description" content="Mobile Viewport Bridge (MVB): phone viewport preview and visual editing for Cursor / VS Code. Independent developer tool with optional $5 sponsorship." />
+  <style>
+    :root {
+      --bg: #071016;
+      --panel: #0d1a21;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --cyan: #4deeea;
+      --line: rgba(77, 238, 234, 0.22);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(900px 420px at 10% -10%, rgba(77, 238, 234, 0.12), transparent 60%),
+        radial-gradient(700px 380px at 90% 0%, rgba(56, 189, 248, 0.08), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 20px 72px;
+    }
+    .brand {
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: clamp(1.8rem, 4vw, 2.4rem);
+      line-height: 1.15;
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 0 0 28px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      font-size: 0.95rem;
+      margin: 0 0 10px;
+      color: var(--cyan);
+      font-weight: 600;
+    }
+    p, li { color: var(--muted); font-size: 0.95rem; }
+    ul { margin: 0; padding-left: 1.15rem; }
+    li { margin: 0.35rem 0; }
+    a { color: var(--cyan); }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 8px 0 28px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: 1px solid var(--line);
+    }
+    .btn-primary {
+      background: rgba(77, 238, 234, 0.16);
+      color: var(--cyan);
+    }
+    .btn-ghost {
+      color: var(--text);
+      background: transparent;
+    }
+    footer {
+      margin-top: 28px;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">YRZ · MVB</div>
+    <h1>Mobile Viewport Bridge</h1>
+    <p class="lead">
+      A Cursor / VS Code extension for mobile phone viewport preview, visual inspection,
+      and MCP-assisted edits — built by an independent developer.
+    </p>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="https://github.com/hole5/mobile-viewport-bridge">GitHub Repository</a>
+      <a class="btn btn-ghost" href="mailto:tnyuan2005@gmail.com">Support Email</a>
+    </div>
+
+    <section class="card">
+      <h2>What customers buy</h2>
+      <p>
+        Optional one-time <strong style="color:var(--text)">$5 sponsorship</strong>
+        (“Support Development”) to fund ongoing development.
+        This is a digital support payment — no physical goods.
+        Early versions do not gate core features behind the sponsorship.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Product &amp; delivery</h2>
+      <ul>
+        <li>Product type: developer software / digital tool (IDE extension)</li>
+        <li>Platforms: Cursor, VS Code (APK experiments may follow)</li>
+        <li>Checkout: hosted Creem payment page opened from the extension</li>
+        <li>Delivery: email receipt after payment; no shipping</li>
+        <li>Price: USD $5, one-time</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>About the seller</h2>
+      <p>
+        Solo independent developer based in China.
+        Focused on developer tools for mobile UI preview workflows inside the IDE.
+      </p>
+      <p>
+        Contact / support:
+        <a href="mailto:tnyuan2005@gmail.com">tnyuan2005@gmail.com</a>
+      </p>
+    </section>
+
+    <footer>
+      © Mobile Viewport Bridge · Product page for transparency and support.
+    </footer>
+  </main>
+</body>
+</html>

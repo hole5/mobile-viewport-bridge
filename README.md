@@ -2,6 +2,15 @@
 
 Cursor / VS Code 扩展：**手机视窗实时预览** + **可视化编辑** + **MCP 双向通道**（本期不含 APK 运行时）。
 
+## Product page (for Creem / support)
+
+- **Product site:** https://hole5.github.io/mobile-viewport-bridge/
+- **Repository:** https://github.com/hole5/mobile-viewport-bridge
+- **Support email:** tnyuan2005@gmail.com
+- **Sponsorship:** optional one-time **$5** “Support Development” (digital, no physical goods)
+
+English summary for reviewers: Mobile Viewport Bridge (MVB) is an independent-developer IDE extension for phone-frame preview and visual editing in Cursor/VS Code. Monetization is currently a simple one-time sponsorship checkout via Creem.
+
 ## 快速开始
 
 ### 1. 安装依赖并构建
